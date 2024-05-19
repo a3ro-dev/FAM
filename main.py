@@ -68,6 +68,11 @@ class Utilities:
         response = requests.get(url)
         data = response.json()
         articles = data["articles"]
+        newsList = []
         for article in articles:
-            Gpt.generate_text_response(f"Generate a concise news report with given data.\n{article}", max_tokens=100)
+            news = Gpt.generate_text_response(f"Generate a concise news report with given data.\n{article}", max_tokens=100)
+            newsList.append(news)
+        return newsList
+
+
     
