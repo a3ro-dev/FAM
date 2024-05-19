@@ -1,78 +1,82 @@
-import pyttsx3
-import speech_recognition as sr
-engine = pyttsx3.init()
-from libs import gpt
+from libs import utilities
 
-Gpt = gpt.Generation()
 
-class Utilities:
+Util = utilities.Utilities()
+
+class Setup:
     def __init__(self):
-        pass
+        self.db = 'db/user.db'
 
-    def speak(self, text: str):
-        engine.say(text)
-        engine.runAndWait()
+    async def insert_user_data(self, name, city, email, assistant_name):
+        import aiosqlite
+        # Connect to the SQLite database
+        async with aiosqlite.connect(self.db) as db:
+            # SQL statement to insert the user data
+            insert_sql = """
+            INSERT INTO User (name, city, email, assistant_name) 
+            VALUES (?, ?, ?, ?);
+            """
+            # Execute the SQL statement
+            await db.execute(insert_sql, (name, city, email, assistant_name))
+            # Commit the transaction
+            await db.commit()
 
-    def getSpeech(self):
-        pass
-
-    def getTime(self):
-        import time
-        return time.ctime()
-
-    def getDate(self):
-        from datetime import datetime
-        # Get the current date
-        now = datetime.now()
-        # Format the date as "October 1st, 2023"
-        speech_friendly_date = now.strftime("%B %d, %Y").replace(" 0", " ")
-        # Add suffix for the day
-        day = now.day
-        if 4 <= day <= 20 or 24 <= day <= 30:
-            suffix = "th"
-        else:
-            suffix = ["st", "nd", "rd"][day % 10 - 1]
-        final_date = f"{speech_friendly_date[:-5]}{suffix}, {speech_friendly_date[-4:]}"
-        return final_date
-    
-    def getWeather(self, city: str):
-        import requests
-        api_key = "054b217266c57c45c2c6dca381babd9f"
-        url = f"http://api.openweathermap.org/data/2.5/weather?q={city},in&appid={api_key}"
-        response = requests.get(url)
-        data = response.json()
-        finalData = {
-        "weather_condition": data["weather"][0]["main"],
-        "detailed_condition": data["weather"][0]["description"],
-        "temperature": data["main"]["temp"],
-        "feels_like": data["main"]["feels_like"],
-        "temp_min": data["main"]["temp_min"],
-        "temp_max": data["main"]["temp_max"],
-        "pressure": data["main"]["pressure"],
-        "humidity": data["main"]["humidity"],
-        "visibility": data["visibility"],
-        "wind_speed": data["wind"]["speed"],
-        "wind_direction": data["wind"]["deg"],
-        "cloudiness": data["clouds"]["all"],
-        "sunrise": data["sys"]["sunrise"],
-        "sunset": data["sys"]["sunset"],
-        "location": data["name"],
-    }
-    
-        Gpt.generate_text_response(f"Generate a concise weather report with given data.\n{finalData}", max_tokens=100)
-
-    def getNews(self):
-        import requests
-        api_key = "67971eebe05d4dffaed478cf1560f4cd"
-        url = f"https://newsapi.org/v2/top-headlines?country=in&apiKey={api_key}"
-        response = requests.get(url)
-        data = response.json()
-        articles = data["articles"]
-        newsList = []
-        for article in articles:
-            news = Gpt.generate_text_response(f"Generate a concise news report with given data.\n{article}", max_tokens=100)
-            newsList.append(news)
-        return newsList
+    def setup(self):
+        Util.speak('Welcome to the setup wizard. Please follow the instructions to setup the assistant.')
+        Util.speak('Please enter the name by which you would like to call the assistant.')
+        name = Util.getSpeech()
+        Util.speak(f'Do you want to call the assistant {name}?, [yes/no]')
+        response: str = Util.getSpeech()
+        if 'yes' in response:
+            self.name = name
+            Util.speak('Setup 1 completed successfully.')
+        elif 'no' in response:
+            Util.speak('Please enter the name by which you would like to call the assistant.')
+            name = Util.getSpeech()
+            self.name = name
+            Util.speak('Setup 1 completed successfully.')
+        Util.speak('Please enter the city for which you would like to get weather updates.')
+        city = Util.getSpeech()
+        Util.speak(f'Do you want to get weather updates for {city}?, [yes/no]')
+        response = Util.getSpeech()
+        if 'yes' in response:
+            self.city = city
+            Util.speak('Setup 2 completed successfully.')
+        elif 'no' in response:
+            Util.speak('Please enter the city for which you would like to get weather updates.')
+            city = Util.getSpeech()
+            self.city = city
+            Util.speak('Setup 2 completed successfully.')
+        Util.speak('Please enter the email address to which you would like to receive emails.')
+        email = Util.getSpeech()
+        Util.speak(f'Do you want to receive emails on {email}?, [yes/no]')
+        response = Util.getSpeech()
+        if 'yes' in response:
+            self.email = email
+            Util.speak('Setup 3 completed successfully.')
+        elif 'no' in response:
+            Util.speak('Please enter the email address to which you would like to receive emails.')
+            email = Util.getSpeech()
+            self.email = email
+            Util.speak('Setup 3 completed successfully.')
+        Util.speak('Please enter your name:')
+        name = Util.getSpeech()
+        Util.speak(f'Welcome! {name}')
+        Util.speak('Finishing setup wizard...')
+        try:
+            import asyncio
+            Util.speak('Saving user data to the database...')
+            asyncio.run(self.insert_user_data(name, city, email, self.name))
+            Util.speak('User data saved successfully.')
+            Util.speak('Setup completed successfully.')
+        except Exception as e:
+            Util.speak('An error occurred while saving user data to the database.')
+            Util.speak(f'Error: {e}')
 
 
-    
+
+if __name__ == '__main__':
+    pass
+        
+
+        
