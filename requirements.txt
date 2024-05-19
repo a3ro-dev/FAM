@@ -1,1 +1,4 @@
-google-generativeai
+vosk
+PyAudio
+openai
+pyttsx3

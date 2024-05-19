@@ -1,7 +1,12 @@
 import pyttsx3
-import speech_recognition as sr
 from libs import gpt
 Gpt = gpt.Generation()
+import json
+import pyaudio
+from vosk import Model, KaldiRecognizer
+model_path = "F:/rai-project/model/vosk-model-small-en-in-0.4"
+model = Model(model_path)
+recognizer = KaldiRecognizer(model, 16000)
 
 class Utilities:
     def __init__(self):
@@ -13,8 +18,22 @@ class Utilities:
         engine.runAndWait()
 
     def getSpeech(self):
-        speech = input("Enter your speech: ")
-        return speech
+        try:
+            p = pyaudio.PyAudio()
+            stream = p.open(format=pyaudio.paInt16, channels=1, rate=16000, input=True, frames_per_buffer=8192)
+            stream.start_stream()
+            print("Listening...")
+            while True:
+                data = stream.read(4096, exception_on_overflow = False)
+                if recognizer.AcceptWaveform(data):
+                    result = recognizer.Result()
+                    text = json.loads(result)["text"]
+                    print(text)
+                    return text
+        except Exception as e:
+            print(e)
+        finally:
+            return text
 
     def getTime(self):
         import time

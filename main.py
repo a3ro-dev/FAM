@@ -72,11 +72,6 @@ class Setup:
         except Exception as e:
             Util.speak('An error occurred while saving user data to the database.')
             Util.speak(f'Error: {e}')
-
-
-
-if __name__ == '__main__':
-    pass
         
 
         
