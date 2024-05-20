@@ -1,5 +1,5 @@
 import pyttsx3
-from libs import gpt
+import gpt
 Gpt = gpt.Generation()
 import json
 import pyaudio

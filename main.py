@@ -1,5 +1,5 @@
-from libs import utilities
-
+# This file contains the main code for the assistant
+import libs.utilities as utilities
 
 Util = utilities.Utilities()
 
@@ -73,5 +73,7 @@ class Setup:
             Util.speak('An error occurred while saving user data to the database.')
             Util.speak(f'Error: {e}')
         
+def main():
+    pass
 
         

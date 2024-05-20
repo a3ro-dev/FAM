@@ -4,3 +4,4 @@ CREATE TABLE IF NOT EXISTS User (
     email TEXT NOT NULL,
     assistant_name TEXT NOT NULL
 );
+
