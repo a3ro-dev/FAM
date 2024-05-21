@@ -4,6 +4,7 @@ Gpt = gpt.Generation()
 import json
 import pyaudio
 from vosk import Model, KaldiRecognizer
+
 model_path = "F:/rai-project/model/vosk-model-small-en-in-0.4"
 model = Model(model_path)
 recognizer = KaldiRecognizer(model, 16000)
@@ -78,7 +79,7 @@ class Utilities:
         "location": data["name"],
     }
     
-        weather = Gpt.generate_text_response(f"Generate a concise weather report with given data.\n{finalData}", max_tokens=100)
+        weather: str = Gpt.generate_text_response(f"Generate a concise weather report with given data.\n{finalData}")
         return weather
 
     def getNews(self):
@@ -90,7 +91,7 @@ class Utilities:
         articles = data["articles"]
         newsList = []
         for article in articles:
-            news = Gpt.generate_text_response(f"Generate a concise news report with given data.\n{article}", max_tokens=100)
+            news: str = Gpt.generate_text_response(f"Generate a concise news report with given data.\n{article}")
             newsList.append(news)
         return newsList
 
@@ -110,6 +111,7 @@ class Utilities:
         from email.mime.multipart import MIMEMultipart
         from email.mime.text import MIMEText
         import smtplib
+
         sender_email = "your_email@gmail.com"
         sender_password = "your_password"
         smtp_server = "smtp.gmail.com"
@@ -136,3 +138,23 @@ class Utilities:
         # Disconnect from the SMTP server
         server.quit()
     
+    def captureImage(self):
+        import cv2
+        camera = cv2.VideoCapture(0)
+        if not camera.isOpened():
+            raise Exception("Failed to open camera")
+
+        # Set the camera resolution to the highest possible
+        camera.set(cv2.CAP_PROP_FRAME_WIDTH, 1920)
+        camera.set(cv2.CAP_PROP_FRAME_HEIGHT, 1080)
+
+        # Capture a frame from the camera
+        ret, frame = camera.read()
+        if not ret:
+            raise Exception("Failed to capture image")
+
+        # Save the captured frame as image.jpg in the assets folder
+        cv2.imwrite(r"F:\ai-assistant\pico-files\assets\image.jpg", frame)
+
+        # Release the camera
+        camera.release()
