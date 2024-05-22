@@ -1,22 +1,26 @@
 import pyttsx3
-import gpt
+import libs.gpt as gpt
 Gpt = gpt.Generation()
 import json
 import pyaudio
 from vosk import Model, KaldiRecognizer
 
-model_path = "F:/rai-project/model/vosk-model-small-en-in-0.4"
+model_path = r'F:\ai-assistant\pico-files\model\vosk-model-small-en-in-0.4'
 model = Model(model_path)
 recognizer = KaldiRecognizer(model, 16000)
 
 class Utilities:
-    def __init__(self):
-        pass
+    def __init__(self, porcupine_listener):
+        self.porcupine_listener = porcupine_listener
 
     def speak(self, text: str):
         engine = pyttsx3.init()
-        engine.say(text)
-        engine.runAndWait()
+        words = text.split()
+        for word in words:
+            if self.porcupine_listener.keyword_event.is_set():
+                return
+            engine.say(word)
+            engine.runAndWait()
 
     def getSpeech(self):
         try:
@@ -95,16 +99,29 @@ class Utilities:
             newsList.append(news)
         return newsList
 
-    def startMyDay(self):
-        location = ''
+    async def startMyDay(self):
+        location = 'Allahabad'
         self.speak("Good Morning!")
+        if self.porcupine_listener.keyword_event.is_set():
+            return
         self.speak(f"Today is {self.getDate()}")
+        if self.porcupine_listener.keyword_event.is_set():
+            return
         self.speak(f"The current time is {self.getTime()}")
+        if self.porcupine_listener.keyword_event.is_set():
+            return
         self.speak("Here are the top news headlines for today")
         newsList = self.getNews()
         for news in newsList:
             self.speak(news)
-        self.speak(self.getWeather(city=location))
+            if self.porcupine_listener.keyword_event.is_set():
+                    return
+        if location is not None:
+            self.speak(self.getWeather(city=location))
+            if self.porcupine_listener.keyword_event.is_set():
+                return
+        else:
+            self.speak("Could not retrieve location.")
         self.speak("That's all for today. Have a great day ahead!")
 
     def sendMail(self, subject: str, recipient: str, content: str):

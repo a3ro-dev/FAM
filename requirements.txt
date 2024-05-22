@@ -2,4 +2,9 @@ vosk
 PyAudio
 opencv-python
 google-cloud-aiplatform
+pvporcupine
 pyttsx3
+pytube
+youtube_search
+moviepy
+fuzzywuzzy
