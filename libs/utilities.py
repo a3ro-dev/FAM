@@ -1,5 +1,5 @@
 import pyttsx3
-import gpt
+import libs.gpt as gpt
 import json
 import pyaudio
 from vosk import Model, KaldiRecognizer

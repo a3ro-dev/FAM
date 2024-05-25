@@ -64,25 +64,27 @@ class PorcupineListener:
         self.init_audio_stream()
         self.is_running = True
         print("Listening for keyword...")
-
+    
         while self.is_running:
             if self.porcupine is not None and self.audio_stream is not None:
                 pcm = self.audio_stream.read(self.porcupine.frame_length)
                 pcm = struct.unpack_from("h" * self.porcupine.frame_length, pcm)
-
+    
                 keyword_index = self.porcupine.process(pcm)
                 if keyword_index >= 0:
                     self.on_keyword_detected()
+                    print("Listening for keyword...")
 
     def on_keyword_detected(self):
         """
         Callback function when a keyword is detected.
         """
-        print("Keyword detected!")
-        Util.speak("Keyword detected. Listening for your command...")
-        command = Util.getSpeech()
-        print(f"Recognized command: {command}")
-        self.process_command(command)
+        while self.is_running:
+            print("Keyword detected!")
+            Util.speak("Keyword detected. Listening for your command...")
+            command = Util.getSpeech()
+            print(f"Recognized command: {command}")
+            self.process_command(command)
 
     def process_command(self, command):
         """
@@ -97,19 +99,18 @@ class PorcupineListener:
             Util.speak(reply)
         elif "time" in command or "what time is it" in command or "current time" in command:
             Util.speak(Util.getTime())
-        elif "vision" in command or "eyes" in command:
-            Util.speak("Let me have a look....")
-            Util.captureImage()
-            reply = str(Gpt.generate_text_with_image(f"{command}", r"F:\ai-assistant\pico-files\assets\image.jpg"))
-            Util.playChime('load')
-
+        # elif "vision" in command or "eyes" in command:
+        #     Util.speak("Let me have a look....")
+        #     Util.captureImage()
+        #     reply = str(Gpt.generate_text_with_image(f"{command}", r"F:\ai-assistant\pico-files\assets\image.jpg"))
+        #     Util.playChime('load')
+        #     Util.speak(reply)
         elif "start" in command or "start my day" in command or "good morning" in command:
             Util.startMyDay()
         elif "music" in command:
             Util.speak("Playing music...")
             music = musicP.MusicPlayer(r'F:\ai-assistant\pico-files\music', shuffle=True)
             music.play_music()
-        
         elif "stop" in command:
             Util.speak("Quitting the program")
             sys.exit(0)
