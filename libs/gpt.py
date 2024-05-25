@@ -1,105 +1,92 @@
+import openai
 import base64
-import vertexai
-from vertexai.generative_models import GenerativeModel, Part, FinishReason, Tool
-import vertexai.preview.generative_models as generative_models
+import requests
+import time
 
 class Generation:
     """
     A class that provides methods for generating text responses and encoding images.
     """
 
-    def encode_image(self, image_path):
-        """Encode an image to base64 format."""
-        with open(image_path, "rb") as image_file:
-            return base64.b64encode(image_file.read()).decode('utf-8')
+    def encode_image(self, image_path: str):
+        with open(image_path, "rb") as image:
+            encoded_image = base64.b64encode(image.read()).decode("utf-8")
+        return encoded_image
+
+    def generate_text_response(self, text: str):
+        # client = openai.OpenAI(api_key='sk-proj-K8hfsSF9vbG1ccu7Mo50T3BlbkFJXB6nXSORFrhYVjkzTWaR')
+        # model="gpt-4o",
+        # response = client.chat.completions.create(
+        #     model="gpt-4o",
+        #     messages=[
+        #         {
+        #             "role": "system",
+        #             "content": "You're Fam, ai voice assistant, made by Akshat Kushwaha"
+        #         },
+        #         {
+        #             "role": "user",
+        #             "content": text
+        #         }
+        #     ],
+        #     temperature=0.5,
+        #     max_tokens=100,
+        #     top_p=1,
+        #     frequency_penalty=0,
+        #     presence_penalty=0
+        # )
+        # response = response.choices[0].message.content
+        # return response
     
-    def generate_text_response(self, prompt: str):
-        """
-        Generate a text response based on the given prompt.
-
-        Args:
-            prompt (str): The prompt for generating the text response.
-
-        Returns:
-            str: The generated text response.
-        """
-        vertexai.init(project="caramel-biplane-423714-f8", location="asia-south1")
-        tools = [
-            Tool.from_google_search_retrieval(
-                google_search_retrieval=generative_models.grounding.GoogleSearchRetrieval(disable_attribution=False) #type: ignore
-            ),
-        ]
-
-        generation_config = {
-            "max_output_tokens":8192,
-            "temperature": 1,
-            "top_p": 0.95,
-        }
-
-        safety_settings = {
-            generative_models.HarmCategory.HARM_CATEGORY_HATE_SPEECH: generative_models.HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE,
-            generative_models.HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT: generative_models.HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE,
-            generative_models.HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT: generative_models.HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE,
-            generative_models.HarmCategory.HARM_CATEGORY_HARASSMENT: generative_models.HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE,
-        }
-
-        model = GenerativeModel(
-            "gemini-1.5-flash-preview-0514",
-            tools=tools,
-        )
-        responses = model.generate_content(
-            contents=[prompt],
-            generation_config=generation_config,
-            safety_settings=safety_settings,
-        )
-        response: str = responses.text #type: ignore
-        return response
-
-def generate_text_with_image(self, image_path, prompt):
-    """
-    Generates text content using an image and a prompt.
-
-    Args:
-        image_path (str): The path to the image file.
-        prompt (str): The prompt for generating the text content.
-
-    Returns:
-        str: The generated text content.
-    """
-    # Initialize Vertex AI
-    vertexai.init(project="caramel-biplane-423714-f8", location="asia-south1")
+        time.sleep(1)
+        return str 
     
-    # Load the generative model
-    model = GenerativeModel("gemini-1.5-pro-preview-0514")
-    
-    encoded_image = self.encode_image(image_path)
-    
-    # Prepare the image part
-    image_part = Part.from_data(
-        mime_type="image/jpeg",
-        data=encoded_image  # type: ignore
-    )
-    
-    # Configuration settings
-    generation_config = {
-        "max_output_tokens": 8192,
-        "temperature": 1,
-        "top_p": 0.95,
-    }
+    def generate_text_with_image(self, text: str, image: str):
+        # api_key = 'sk-proj-K8hfsSF9vbG1ccu7Mo50T3BlbkFJXB6nXSORFrhYVjkzTWaR'
 
-    safety_settings = {
-        generative_models.HarmCategory.HARM_CATEGORY_HATE_SPEECH: generative_models.HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE,
-        generative_models.HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT: generative_models.HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE,
-        generative_models.HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT: generative_models.HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE,
-        generative_models.HarmCategory.HARM_CATEGORY_HARASSMENT: generative_models.HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE,
-    }
-    
-    # Generate content with the image and prompt
-    responses = model.generate_content(
-        contents=[image_part, prompt],
-        generation_config=generation_config,
-        safety_settings=safety_settings
-    )
-    
-    response = responses.text #type: ignore
-    return str(response)
+        # # Getting the base64 string
+        # base64_image = self.encode_image(image)
+
+        # headers = {
+        # "Content-Type": "application/json",
+        # "Authorization": f"Bearer {api_key}"
+        # }
+
+        # payload = {
+        # "model": "gpt-4o",
+        # "messages": [
+        #     {
+        #     "role": "user",
+        #     "content": [
+        #         {
+        #         "type": "text",
+        #         "text": text
+        #         },
+        #         {
+        #         "type": "image_url",
+        #         "image_url": {
+        #             "url": f"data:image/jpeg;base64,{base64_image}"
+        #         }
+        #         }
+        #     ]
+        #     }
+        # ],
+        # "max_tokens": 300
+        # }
+
+        # response = requests.post("https://api.openai.com/v1/chat/completions", headers=headers, json=payload)
+
+        # print(response.json()['choices'][0]['message']['content'])
+
+        time.sleep(1)
+        return "you're looking cute"
+
+
+
+gpt = Generation()
+print(gpt.generate_text_response("tell me abt meosis"))
+
+# You look great today!
+# Your off-shoulder top is very stylish,
+# and your smile adds a lovely and cheerful vibe to your selfie.
+# The light purple phone case is a nice touch as well. Keep shining!'
+
