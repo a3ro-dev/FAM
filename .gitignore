@@ -1,2 +1,9 @@
 music/
 assets/image.png
+assets/image.jpg
+*.pyc
+__pycache__/
+venv/
+*.env
+.idea/
+.vscode/

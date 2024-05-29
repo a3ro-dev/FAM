@@ -1,9 +1,12 @@
 import pyttsx3
-import libs.gpt as gpt
+import gpt as gpt
 import json
+import random
 import pyaudio
 from vosk import Model, KaldiRecognizer
 from audioplayer import AudioPlayer
+import time
+import cv2
 
 Gpt = gpt.Generation()
 
@@ -27,35 +30,33 @@ class Utilities:
             print(f"Unknown chime type: {type}")
 
     def speak(self, text: str):
-        # engine = pyttsx3.init()
-        # print(f"Speaking: {text}")
-        # engine.say(text)
-        # engine.runAndWait()
+        engine = pyttsx3.init()
+        print(f"Speaking: {text}")
+        engine.say(text)
+        engine.runAndWait()
         print(text)
 
     def getSpeech(self):
-        # try:
-        #     p = pyaudio.PyAudio()
-        #     stream = p.open(format=pyaudio.paInt16, channels=1, rate=16000, input=True, frames_per_buffer=8192)
-        #     stream.start_stream()
-        #     print("Listening for speech...")
-        #     while True:
-        #         data = stream.read(4096, exception_on_overflow=False)
-        #         if recognizer.AcceptWaveform(data):
-        #             result = recognizer.Result()
-        #             text = json.loads(result)["text"]
-        #             print(f"Recognized speech: {text}")
-        #             self.playChime('success')
-        #             return text
-        # except Exception as e:
-        #     self.playChime('error')
-        #     print(f"Error in getSpeech: {e}")
-        # finally:
-        #     stream.stop_stream()
-        #     stream.close()
-        #     p.terminate()
-        reply = input("Enter your command: ")
-        return reply
+        try:
+            p = pyaudio.PyAudio()
+            stream = p.open(format=pyaudio.paInt16, channels=1, rate=16000, input=True, frames_per_buffer=8192)
+            stream.start_stream()
+            print("Listening for speech...")
+            while True:
+                data = stream.read(4096, exception_on_overflow=False)
+                if recognizer.AcceptWaveform(data):
+                    result = recognizer.Result()
+                    text = json.loads(result)["text"]
+                    print(f"Recognized speech: {text}")
+                    self.playChime('success')
+                    return str(text)
+        except Exception as e:
+            self.playChime('error')
+            print(f"Error in getSpeech: {e}")
+        finally:
+            stream.stop_stream()
+            stream.close()
+            p.terminate()
 
     def getTime(self):
         import time
@@ -96,22 +97,28 @@ class Utilities:
             "sunset": data["sys"]["sunset"],
             "location": data["name"],
         }
-        # weather = Gpt.generate_text_response(f"Generate a concise weather report with given data.\n{finalData}")
-        weather = 'it is good weather today.'
+        weather = Gpt.generate_text_response(f"Generate a concise weather report with given data.\n{finalData}")
+        # weather = 'it is good weather today.'
         return weather
 
+
     def getNews(self):
-        # import requests
-        # api_key = "67971eebe05d4dffaed478cf1560f4cd"
-        # url = f"https://newsapi.org/v2/top-headlines?country=in&apiKey={api_key}"
-        # response = requests.get(url)
-        # data = response.json()
-        # articles = data["articles"]
-        newsList = ['modi won', 'rahul lost', 'kejriwal back in jail']
-        # for article in articles:
-        #     news = Gpt.generate_text_response(f"Generate a concise news report with given data.\n{article}")
-        #     self.playChime('success')
-        #     newsList.append(news)
+        import requests
+        api_key = "67971eebe05d4dffaed478cf1560f4cd"
+        url = f"https://newsapi.org/v2/top-headlines?country=in&apiKey={api_key}"
+        response = requests.get(url)
+        data = response.json()
+        articles = data["articles"]
+        newsList = []
+
+        # Randomly select 5 articles
+        selected_articles = random.sample(articles, 5)
+
+        for article in selected_articles:
+            news = Gpt.generate_text_response(f"Generate a concise news report with given data.\n{article}")
+            self.playChime('success')
+            newsList.append(news)
+
         return newsList
 
     def startMyDay(self):
@@ -152,8 +159,10 @@ class Utilities:
         server.quit()
 
     def captureImage(self):
-        import cv2
-        camera = cv2.VideoCapture(0)
+        # Delay for 2 seconds
+        time.sleep(1)
+        
+        camera = cv2.VideoCapture(1)
         if not camera.isOpened():
             self.playChime('error')
             raise Exception("Failed to open camera")
