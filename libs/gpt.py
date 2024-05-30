@@ -108,6 +108,7 @@ class Generation:
             self.messages = self.messages[1:]
 
         return response
+    
 
 
 
