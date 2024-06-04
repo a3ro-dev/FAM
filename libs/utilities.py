@@ -1,5 +1,5 @@
 import pyttsx3
-import gpt as gpt
+import libs.gpt as gpt
 import json
 import random
 import pyaudio
@@ -10,7 +10,7 @@ import cv2
 
 Gpt = gpt.Generation()
 
-model_path = r'F:\ai-assistant\pico-files\model\vosk-model-small-en-in-0.4'
+model_path = r'F:\ai-assistant\pico-files\model\vosk-model-en-in-0.5'
 model = Model(model_path)
 recognizer = KaldiRecognizer(model, 16000)
 

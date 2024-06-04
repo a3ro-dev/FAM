@@ -2,7 +2,10 @@ import os
 import random
 import threading
 import time
-import pygame
+import vlc
+import vlc
+
+# vlc.dll_path = r'F:\ai-assistant\pico-files\modules\libvlc.dll' # adjust the path as necessary
 
 class MusicPlayer:
     def __init__(self, music_directory, shuffle=False):
@@ -13,7 +16,7 @@ class MusicPlayer:
         self.is_playing = False
         self.is_paused = False
         self.thread = None
-        pygame.mixer.init()
+        self.player = vlc.MediaPlayer()
 
     def load_playlist(self):
         return [os.path.join(self.music_directory, f) for f in os.listdir(self.music_directory) if f.endswith(('.mp3', '.wav'))]
@@ -28,11 +31,11 @@ class MusicPlayer:
 
         self.is_playing = True
         self.is_paused = False
-        pygame.mixer.music.load(self.playlist[self.current_index])
-        pygame.mixer.music.play()
+        self.player.set_mrl(self.playlist[self.current_index])
+        self.player.play()
 
         while self.is_playing:
-            if not pygame.mixer.music.get_busy():
+            if not self.player.is_playing():
                 self.play_next()
             time.sleep(1)
 
@@ -43,28 +46,32 @@ class MusicPlayer:
 
     def play_next(self):
         self.current_index = (self.current_index + 1) % len(self.playlist)
-        pygame.mixer.music.load(self.playlist[self.current_index])
-        pygame.mixer.music.play()
+        self.player.set_mrl(self.playlist[self.current_index])
+        self.player.play()
 
     def pause_music(self):
         if self.is_playing and not self.is_paused:
-            pygame.mixer.music.pause()
+            self.player.pause()
             self.is_paused = True
 
     def unpause_music(self):
         if self.is_playing and self.is_paused:
-            pygame.mixer.music.unpause()
+            self.player.play()
             self.is_paused = False
 
     def stop_music(self):
         self.is_playing = False
-        pygame.mixer.music.stop()
+        self.player.stop()
         if self.thread is not None:
             self.thread.join()
 
     def set_volume(self, volume):
-        pygame.mixer.music.set_volume(volume / 100.0)
+        self.player.audio_set_volume(volume)
 
     def seek_forward(self, seconds):
         if self.is_playing:
-            pygame.mixer.music.set_pos(pygame.mixer.music.get_pos() / 1000.0 + seconds)
+            self.player.set_time(self.player.get_time() + seconds * 1000)
+
+
+music = MusicPlayer(r"F:\ai-assistant\pico-files\music", shuffle=True)
+music.play_music_thread()

@@ -2,12 +2,12 @@ import pyaudio
 import struct
 import pvporcupine
 import threading
-import libs.gpt
+import libs.gpt as gpt
 import libs.music as musicP
 import libs.utilities as utilities
 import sys
 
-Gpt = libs.gpt.Generation()
+Gpt = gpt.Generation()
 Util = utilities.Utilities()
 
 class PorcupineListener:

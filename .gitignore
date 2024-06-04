@@ -1,6 +1,7 @@
 music/
 assets/image.png
 assets/image.jpg
+model/
 *.pyc
 __pycache__/
 venv/
