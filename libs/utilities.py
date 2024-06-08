@@ -42,6 +42,7 @@ class Utilities:
             stream = p.open(format=pyaudio.paInt16, channels=1, rate=16000, input=True, frames_per_buffer=8192)
             stream.start_stream()
             print("Listening for speech...")
+            start_time = time.time()
             while True:
                 data = stream.read(4096, exception_on_overflow=False)
                 if recognizer.AcceptWaveform(data):
@@ -50,6 +51,12 @@ class Utilities:
                     print(f"Recognized speech: {text}")
                     self.playChime('success')
                     return str(text)
+                elif not recognizer.PartialResult():
+                    print("User stopped speaking.")
+                    break
+                if time.time() - start_time > 10:  # Listen for 10 seconds
+                    print("Listening timeout.")
+                    break
         except Exception as e:
             self.playChime('error')
             print(f"Error in getSpeech: {e}")
@@ -162,7 +169,7 @@ class Utilities:
         # Delay for 2 seconds
         time.sleep(1)
         
-        camera = cv2.VideoCapture(1)
+        camera = cv2.VideoCapture(0)
         if not camera.isOpened():
             self.playChime('error')
             raise Exception("Failed to open camera")
@@ -177,4 +184,4 @@ class Utilities:
 
         cv2.imwrite(r"F:\ai-assistant\pico-files\assets\image.jpg", frame)
         self.playChime('success')
-        camera.release()
+        camera.release()  

@@ -6,9 +6,21 @@ import libs.gpt as gpt
 import libs.music as musicP
 import libs.utilities as utilities
 import sys
+import platform
+import difflib
+import yaml
 
 Gpt = gpt.Generation()
 Util = utilities.Utilities()
+
+with open('pico-files/conf/config.yaml', 'r') as file:
+    config = yaml.safe_load(file)
+
+access_key = config['main']['access_key']
+keyword_path = config['main']['keyword_path']
+music_path = config['main']['music_path']
+
+commands = {"how are you", "hi", "hello", "wassup", "what's up", "hey", "sup", "time", "what time is it", "current time", "date", "what's the date", "current date", "vision", "eyes", "start", "start my day", "good morning", "news", "daily news", "what's happening", "what's the news", "play music", "pause", "resume", "stop", "next", "skip", "seek forward", "shut down"}
 
 class PorcupineListener:
     def __init__(self, access_key, keyword_path):
@@ -18,10 +30,14 @@ class PorcupineListener:
         self.porcupine = None
         self.audio_stream = None
         self.is_running = False
-        self.music_player = musicP.MusicPlayer(r'F:\ai-assistant\pico-files\music', shuffle=True)
+        self.music_player = musicP.MusicPlayer(music_path, shuffle=True)
 
     def init_porcupine(self):
-        self.porcupine = pvporcupine.create(access_key=self.access_key, keyword_paths=[self.keyword_path])
+        try:
+            self.porcupine = pvporcupine.create(access_key=self.access_key, keyword_paths=[self.keyword_path])
+        except Exception as e:
+            print(f"Failed to initialize Porcupine: {e}")
+            self.porcupine = None 
 
     def init_audio_stream(self):
         pa = pyaudio.PyAudio()
@@ -53,9 +69,18 @@ class PorcupineListener:
     def on_keyword_detected(self):
         print("Keyword detected!")
         Util.speak("Keyword detected. Listening for your command...")
+        if self.music_player.is_playing:  # Check if music is playing
+            self.music_player.set_volume(20)
         command = Util.getSpeech()
         print(f"Recognized command: {command}")
-        self.process_command(command)
+        if command and "music" in command:  # Check if command is related to music
+            self.process_command(command)
+        elif self.music_player.is_playing:  # Check if music is playing
+            Util.speak("Please stop the music player first by saying 'stop music'.")
+        else:
+            self.process_command(command)  # Process non-music commands
+        if self.music_player.is_playing:  # Check if music is playing
+            self.music_player.set_volume(100)  # Set volume back to 100
 
     def process_command(self, command):
         print(f"Processing command: {command}")
@@ -78,48 +103,57 @@ class PorcupineListener:
             Util.speak(reply)
         elif "start" in command or "start my day" in command or "good morning" in command:
             Util.startMyDay()
-        elif "date" in command or "what's the date" in command or "current date" in command:
-            Util.speak(Util.getDate())
         elif "news" in command or "daily news" in command or "what's happening" in command or "what's the news" in command:
             Util.speak("Here are the top news headlines...")
             news = Util.getNews()
             for headline in news:
                 Util.speak(headline)
-        # elif "play music" in command:
-        #     Util.speak("Playing music...")
-        #     self.music_player.play_music_thread()
-        # elif "pause music" in command:
-        #     Util.speak("Pausing music...")
-        #     self.music_player.pause_music()
-        # elif "unpause music" in command:
-        #     Util.speak("Unpausing music...")
-        #     self.music_player.unpause_music()
-        # elif "stop music" in command:
-        #     Util.speak("Stopping music...")
-        #     self.music_player.stop_music()
-        # elif "next music" in command or "skip music" in command:
-        #     Util.speak("Playing next track...")
-        #     self.music_player.play_next()
-        # elif "set volume" in command:
+        elif "play music" in command:
+            Util.speak("Playing music...")
+            self.music_player.play_music_thread()
+        elif "pause" in command:
+            Util.speak("Pausing music...")
+            self.music_player.pause_music()
+        elif "resume" in command:
+            Util.speak("Unpausing music...")
+            self.music_player.unpause_music()
+        elif "stop" in command:
+            Util.speak("Stopping music...")
+            self.music_player.stop_music()
+        elif "next" in command or "skip" in command:
+            Util.speak("Playing next track...")
+            self.music_player.play_next()
+        # elif "volume" in command:
         #     try:
         #         volume = int(command.split()[-1])
         #         Util.speak(f"Setting volume to {volume}")
         #         self.music_player.set_volume(volume)
         #     except ValueError:
         #         Util.speak("Invalid volume level. Please provide a number between 1 and 100.")
-        # elif "seek forward" in command:
-        #     try:
-        #         seconds = int(command.split()[-1])
-        #         Util.speak(f"Seeking forward by {seconds} seconds")
-        #         self.music_player.seek_forward(seconds)
-        #     except ValueError:
-        #         Util.speak("Invalid time. Please provide the number of seconds to seek forward.")
-        elif "stop" in command:
+        elif "seek forward" in command:
+            try:
+                seconds = 10
+                Util.speak(f"Seeking forward by {seconds} seconds")
+                self.music_player.seek_forward(seconds)
+            except ValueError:
+                Util.speak("Invalid time. Please provide the number of seconds to seek forward.")
+        elif "shut down" in command:
             Util.speak("Quitting the program")
             self.stop()
             sys.exit(0)
         else:
-            Util.speak("I'm sorry, I didn't understand that command.")
+            # Find the closest match to the command
+            close_matches = difflib.get_close_matches(command, commands, n=1)
+            if close_matches:
+                closest_match = close_matches[0]
+                Util.speak(f"Did you mean '{closest_match}'? Please say yes or no.")
+                response = Util.getSpeech()
+                if response == "yes":
+                    self.process_command(closest_match)
+                else:
+                    Util.speak("I'm sorry, I didn't understand that command.")
+            else:
+                Util.speak("I'm sorry, I didn't understand that command.")
 
     def stop(self):
         self.is_running = False
@@ -133,8 +167,14 @@ class PorcupineListener:
         self.thread = threading.Thread(target=self.start)
         self.thread.start()
 
+keyword_path = ""
+if platform.system() == "Windows":
+    keyword_path = r"F:\ai-assistant\pico-files\model\wake-mode\Hey-Fam_en_windows_v3_0_0.ppn"
+elif platform.machine() == "armv6l":  # Raspberry Pi Zero 2 W uses ARMv6 architecture
+    keyword_path = r"F:\ai-assistant\pico-files\model\wake-mode\Hey-Fam_en_raspberry-pi_v3_0_0.ppn"
+
 porcupine_listener = PorcupineListener(access_key="DGN57sdflXC4x5AmT5Q9e0xl7D0fyxSMWjF4um8+aFR3OTLsEE6eZA==",
-                                       keyword_path=r"F:\ai-assistant\pico-files\model\wake-mode\Hey-Fam_en_windows_v3_0_0.ppn")
+                                       keyword_path=keyword_path)
 
 def main():
     porcupine_listener.run_in_thread()

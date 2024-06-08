@@ -74,7 +74,7 @@ class Generation:
 
         response = requests.post("https://api.openai.com/v1/chat/completions", headers=headers, json=payload)
 
-        print(response.json()['choices'][0]['message']['content'])
+        return response.json()['choices'][0]['message']['content']
 
     def live_chat_with_ai(self, text: str):
         if len(self.messages) >= self.max_messages:

@@ -1,0 +1,24 @@
+main:
+    access_key: "<your_access_key_here>"
+    keyword_path: "<your_keyword_path_here>"
+    music_path: "<your_music_path_here>"
+    groq_api_key: "<your_groq_api_key_here>"
+    openai_api_key: "<your_openai_api_key_here>"
+    model_name: "<your_model_name_here>"
+utilities:
+    author: "<your_name_here>"
+    audio_files:
+        success: "<path_to_success_audio_file_here>"
+        error: "<path_to_error_audio_file_here>"
+        load: "<path_to_load_audio_file_here>"
+    model_path: "<path_to_model_here>"
+    weather_api_key: "<your_weather_api_key_here>"
+    news_api_key: "<your_news_api_key_here>"
+    email:
+        sender_email: "<your_email_here>"
+        sender_password: "<your_password_here>"
+        smtp_server: "<your_smtp_server_here>"
+        smtp_port: "<your_smtp_port_here>"
+    image_path: "<path_to_image_here>"
+music_search:
+    output_path: "<path_to_output_here>"

@@ -1,0 +1,24 @@
+main:
+    access_key: "DGN57sdflXC4x5AmT5Q9e0xl7D0fyxSMWjF4um8+aFR3OTLsEE6eZA=="
+    keyword_path: "<your_keyword_path>"
+    music_path: "pico-files\\music"
+    groq_api_key: "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"
+    openai_api_key: "sk-proj-K8hfsSF9vbG1ccu7Mo50T3BlbkFJXB6nXSORFrhYVjkzTWaR"
+    model_name: "llama3-70b-8192"
+utilities:
+    author: "AKSHAT SINGH KUSHWAHA"
+    audio_files:
+        success: "pico-files\\assets\\audio\\success.mp3"
+        error: "pico-files\\assets\\audio\\error.mp3"
+        load: "pico-files\\assets\\audio\\load.mp3"
+    model_path: "pico-files\\model\\vosk-model-en-in-0.5"
+    weather_api_key: "054b217266c57c45c2c6dca381babd9f"
+    news_api_key: "67971eebe05d4dffaed478cf1560f4cd"
+    email:
+        sender_email: "your_email@gmail.com"
+        sender_password: "your_password"
+        smtp_server: "smtp.gmail.com"
+        smtp_port: 587
+    image_path: "pico-files\\assets\\image.jpg"
+music_search:
+    output_path: "pico-files\\music"

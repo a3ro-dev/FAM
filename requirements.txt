@@ -7,4 +7,5 @@ pytube
 youtube_search
 moviepy
 fuzzywuzzy
+pyyaml
 AudioPlayer
