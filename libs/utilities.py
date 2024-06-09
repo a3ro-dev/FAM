@@ -1,17 +1,13 @@
 import libs.gpt as gpt
 import random
 from vosk import Model, KaldiRecognizer
-from audioplayer import AudioPlayer
+from playsound import playsound
 import time
 import cv2
 from gtts import gTTS
 import speech_recognition as sr
 
 Gpt = gpt.Generation()
-
-# model_path = r'F:\ai-assistant\pico-files\model\vosk-model-small-en-in-0.4'
-# model = Model(model_path)
-# recognizer = KaldiRecognizer(model, 16000)
 
 class Utilities:
     def __init__(self):
@@ -25,7 +21,7 @@ class Utilities:
     def playChime(self, type: str):
         try:
             if type in self.audio_files:
-                AudioPlayer(self.audio_files[type]).play(block=True)
+                playsound(self.audio_files[type])
             else:
                 raise ValueError(f"Unknown chime type: {type}")
         except Exception as e:
@@ -34,7 +30,7 @@ class Utilities:
     def speak(self, text: str):
         tts = gTTS(text=text, lang='en', slow=False)
         tts.save("/home/pi/FAM/pico-files/assets/cache/tts.mp3")
-        AudioPlayer("/home/pi/FAM/pico-files/assets/cache/tts.mp3").play(block=True)
+        playsound("/home/pi/FAM/pico-files/assets/cache/tts.mp3")
         print(text)
 
     # def getSpeech(self):

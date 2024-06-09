@@ -10,7 +10,6 @@ youtube_search
 moviepy
 fuzzywuzzy
 pyyaml
-AudioPlayer
 gTTS
 groq
-gi
+playsound
