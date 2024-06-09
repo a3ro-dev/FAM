@@ -1,8 +1,7 @@
-music/
 assets/image.png
 assets/image.jpg
 model/
-F:\ai-assistant\pico-files\model\vosk-model-small-en-in-0.4
+F:\ai-assistant\pico-files\model\wake-mode\Hey-Fam_en_windows_v3_0_0.ppn
 *.pyc
 __pycache__/
 venv/
