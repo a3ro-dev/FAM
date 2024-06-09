@@ -13,7 +13,7 @@ import yaml
 Gpt = gpt.Generation()
 Util = utilities.Utilities()
 
-with open(r'F:\ai-assistant\pico-files\conf\config.yaml', 'r') as file:
+with open('/home/pi/FAM/pico-files/conf/config.yaml', 'r') as file:
     config = yaml.safe_load(file)
 
 access_key = config['main']['access_key']
@@ -30,7 +30,7 @@ class PorcupineListener:
         self.porcupine = None
         self.audio_stream = None
         self.is_running = False
-        self.music_player = musicP.MusicPlayer(r"F:\ai-assistant\pico-files\music", shuffle=True)
+        self.music_player = musicP.MusicPlayer(music_path, shuffle=True)
 
     def init_porcupine(self):
         try:
@@ -165,7 +165,7 @@ keyword_path = ""
 if platform.system() == "Windows":
     keyword_path = r"F:\ai-assistant\pico-files\model\wake-mode\Hey-Fam_en_windows_v3_0_0.ppn"
 elif platform.machine() == "armv6l":
-    keyword_path = r"F:\ai-assistant\pico-files\model\wake-mode\Hey-Fam_en_raspberry-pi_v3_0_0.ppn"
+    keyword_path = "/home/pi/FAM/pico-files/model/wake-mode/Hey-Fam_en_raspberry-pi_v3_0_0.ppn"
 
 porcupine_listener = PorcupineListener(access_key=access_key, keyword_path=keyword_path)
 
