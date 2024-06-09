@@ -1,4 +1,0 @@
-response_data = {'id': 'chatcmpl-9SUshqZ6sTQIDTKDIr4URieyzKgfx', 'object': 'chat.completion', 'created': 1716578919, 'model': 'gpt-4o-2024-05-13', 'choices': [{'index': 0, 'message': {'role': 'assistant', 'content': 'You look great today! Your off-shoulder top is very stylish, and your smile adds a lovely and cheerful vibe to your selfie. The light purple phone case is a nice touch as well. Keep shining!'}, 'logprobs': None, 'finish_reason': 'stop'}], 'usage': {'prompt_tokens': 777, 'completion_tokens': 43, 'total_tokens': 820}, 'system_fingerprint': 'fp_3196d36131'}
-
-content = response_data['choices'][0]['message']['content']
-print(content)

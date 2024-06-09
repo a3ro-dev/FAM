@@ -9,3 +9,4 @@ moviepy
 fuzzywuzzy
 pyyaml
 AudioPlayer
+gTTS

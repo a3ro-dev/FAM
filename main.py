@@ -71,9 +71,13 @@ class PorcupineListener:
         Util.speak("Keyword detected. Listening for your command...")
         if self.music_player.is_playing:
             self.music_player.set_volume(20)
-        command = Util.getSpeech()
+        try:
+            command = Util.getSpeech()
+        except Exception as e:
+            print(f"Error in speech recognition {e}")
+            return
         print(f"Recognized command: {command}")
-        if self.music_player.is_playing:
+        if self.music_player.is_playing and command != "stop music":
             Util.speak("Please stop the music player first by saying 'stop music'.")
         else:
             self.process_command(command)
@@ -128,7 +132,7 @@ class PorcupineListener:
                 self.music_player.seek_forward(seconds)
             except ValueError:
                 Util.speak("Invalid time. Please provide the number of seconds to seek forward.")
-        elif "shut down" in command:
+        elif "shut down" in command or "shutdown" in command:
             Util.speak("Quitting the program")
             self.stop()
             sys.exit(0)
