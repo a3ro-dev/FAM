@@ -22,7 +22,7 @@ class Generation:
             messages=[
                     {
                         "role": "system",
-                        "content": "You're Fam, ai voice assistant, made by Akshat Kushwaha. You are always supposed to answer in brief sentences and in human-like language. You have to answer all kinds of questions and queries."
+                        "content": "do as directed."
                     },
                     {
                         "role": "user",
@@ -108,8 +108,3 @@ class Generation:
             self.messages = self.messages[1:]
 
         return response
-    
-
-
-
-

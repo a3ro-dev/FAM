@@ -16,6 +16,8 @@ class MusicPlayer:
         self.lock = threading.Lock()
 
     def load_playlist(self):
+        if not os.path.isdir(self.music_directory):
+            raise ValueError(f"Invalid directory: {self.music_directory}")
         return [os.path.join(self.music_directory, f) for f in os.listdir(self.music_directory) if f.endswith(('.mp3', '.wav'))]
 
     def play_music(self):
@@ -29,8 +31,13 @@ class MusicPlayer:
 
             self.is_playing = True
             self.is_paused = False
-            pygame.mixer.music.load(self.playlist[self.current_index])
-            pygame.mixer.music.play()
+            try:
+                pygame.mixer.music.load(self.playlist[self.current_index])
+                pygame.mixer.music.play()
+            except pygame.error as e:
+                print(f"Error playing music: {e}")
+                self.is_playing = False
+                return
 
         while self.is_playing:
             if not pygame.mixer.music.get_busy() and not self.is_paused:
@@ -45,8 +52,12 @@ class MusicPlayer:
     def play_next(self):
         with self.lock:
             self.current_index = (self.current_index + 1) % len(self.playlist)
-            pygame.mixer.music.load(self.playlist[self.current_index])
-            pygame.mixer.music.play()
+            try:
+                pygame.mixer.music.load(self.playlist[self.current_index])
+                pygame.mixer.music.play()
+            except pygame.error as e:
+                print(f"Error playing music: {e}")
+                self.is_playing = False
 
     def pause_music(self):
         with self.lock:
@@ -68,12 +79,18 @@ class MusicPlayer:
                 self.thread.join()
 
     def set_volume(self, volume: int):
-        pygame.mixer.music.set_volume(volume / 100.0)  # pygame uses a scale of 0.0 to 1.0
+        if 0 <= volume <= 100:
+            pygame.mixer.music.set_volume(volume / 100.0)  # pygame uses a scale of 0.0 to 1.0
+        else:
+            raise ValueError("Volume must be between 0 and 100")
 
     def seek_forward(self, seconds):
         if self.is_playing:
             current_pos = pygame.mixer.music.get_pos() / 1000
-            pygame.mixer.music.set_pos(current_pos + seconds)
+            try:
+                pygame.mixer.music.set_pos(current_pos + seconds)
+            except pygame.error as e:
+                print(f"Error seeking forward: {e}")
 
 def main():
     music = MusicPlayer(r"F:\ai-assistant\pico-files\music", shuffle=True)
