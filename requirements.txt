@@ -3,6 +3,8 @@ PyAudio
 opencv-python
 pvporcupine
 pyttsx3
+pygame
+SpeechRecognition=2.2.0
 pytube
 youtube_search
 moviepy
