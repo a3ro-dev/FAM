@@ -17,9 +17,9 @@ class Utilities:
     def __init__(self):
         self.author = "AKSHAT SINGH KUSHWAHA"
         self.audio_files = {
-            "success": "F:/ai-assistant/pico-files/assets/audio/success.mp3",
-            "error": "F:/ai-assistant/pico-files/assets/audio/error.mp3",
-            "load": "F:/ai-assistant/pico-files/assets/audio/load.mp3"
+            "success": "/home/pi/FAM/pico-files/assets/audio/success.mp3",
+            "error": "/home/pi/FAM/pico-files/assets/audio/error.mp3",
+            "load": "/home/pi/FAM/pico-files/assets/audio/load.mp3"
         }
 
     def playChime(self, type: str):
@@ -33,8 +33,8 @@ class Utilities:
 
     def speak(self, text: str):
         tts = gTTS(text=text, lang='en', slow=False)
-        tts.save(r"F:\ai-assistant\pico-files\assets\cache\tts.mp3")
-        AudioPlayer(r"F:\ai-assistant\pico-files\assets\cache\tts.mp3").play(block=True)
+        tts.save("/home/pi/FAM/pico-files/assets/cache/tts.mp3")
+        AudioPlayer("/home/pi/FAM/pico-files/assets/cache/tts.mp3").play(block=True)
         print(text)
 
     # def getSpeech(self):
@@ -227,7 +227,7 @@ class Utilities:
         server.send_message(message)
         server.quit()
 
-    def captureImage(self, save_path="F:\\ai-assistant\\pico-files\\assets\\image.jpg"):
+    def captureImage(self, save_path="/home/pi/FAM/pico-files/assets/image.jpg"):
         try:
             # Delay for 1 second
             time.sleep(1)

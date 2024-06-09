@@ -92,33 +92,33 @@ class MusicPlayer:
             except pygame.error as e:
                 print(f"Error seeking forward: {e}")
 
-def main():
-    music = MusicPlayer(r"F:\ai-assistant\pico-files\music", shuffle=True)
+# def main():
+#     music = MusicPlayer(r"F:\ai-assistant\pico-files\music", shuffle=True)
     
-    # Using a separate thread to listen for commands
-    def command_listener():
-        while True:
-            command = input("Enter a command: ")
-            if command == "play music":
-                music.play_music_thread()
-            elif command == "pause":
-                music.pause_music()
-            elif command == "unpause":
-                music.unpause_music()
-            elif command == "stop":
-                music.stop_music()
-            elif command == "next":
-                music.play_next()
-            elif command.startswith("set volume"):
-                _, volume = command.split()
-                music.set_volume(int(volume))
-            elif command.startswith("seek forward"):
-                _, seconds = command.split()
-                music.seek_forward(int(seconds))
+#     # Using a separate thread to listen for commands
+#     def command_listener():
+#         while True:
+#             command = input("Enter a command: ")
+#             if command == "play music":
+#                 music.play_music_thread()
+#             elif command == "pause":
+#                 music.pause_music()
+#             elif command == "unpause":
+#                 music.unpause_music()
+#             elif command == "stop":
+#                 music.stop_music()
+#             elif command == "next":
+#                 music.play_next()
+#             elif command.startswith("set volume"):
+#                 _, volume = command.split()
+#                 music.set_volume(int(volume))
+#             elif command.startswith("seek forward"):
+#                 _, seconds = command.split()
+#                 music.seek_forward(int(seconds))
 
-    command_thread = threading.Thread(target=command_listener, daemon=True)
-    command_thread.start()
-    command_thread.join()  # Ensuring the main thread waits for command thread to complete
+#     command_thread = threading.Thread(target=command_listener, daemon=True)
+#     command_thread.start()
+#     command_thread.join()  # Ensuring the main thread waits for command thread to complete
 
-if __name__ == "__main__":
-    main()
+# if __name__ == "__main__":
+#     main()
