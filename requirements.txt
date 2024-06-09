@@ -10,3 +10,4 @@ fuzzywuzzy
 pyyaml
 AudioPlayer
 gTTS
+groq
