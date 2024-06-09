@@ -2,6 +2,7 @@ music/
 assets/image.png
 assets/image.jpg
 model/
+F:\ai-assistant\pico-files\model\vosk-model-small-en-in-0.4
 *.pyc
 __pycache__/
 venv/

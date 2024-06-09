@@ -7,6 +7,11 @@ from vosk import Model, KaldiRecognizer
 from audioplayer import AudioPlayer
 import time
 import cv2
+import requests
+from datetime import datetime
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
+import smtplib
 
 Gpt = gpt.Generation()
 
@@ -22,6 +27,7 @@ class Utilities:
             "error": "F:/ai-assistant/pico-files/assets/audio/error.mp3",
             "load": "F:/ai-assistant/pico-files/assets/audio/load.mp3"
         }
+        self.engine = pyttsx3.init()
 
     def playChime(self, type: str):
         if type in self.audio_files:
@@ -30,10 +36,9 @@ class Utilities:
             print(f"Unknown chime type: {type}")
 
     def speak(self, text: str):
-        engine = pyttsx3.init()
         print(f"Speaking: {text}")
-        engine.say(text)
-        engine.runAndWait()
+        self.engine.say(text)
+        self.engine.runAndWait()
         print(text)
 
     def getSpeech(self):
@@ -51,9 +56,6 @@ class Utilities:
                     print(f"Recognized speech: {text}")
                     self.playChime('success')
                     return str(text)
-                elif not recognizer.PartialResult():
-                    print("User stopped speaking.")
-                    break
                 if time.time() - start_time > 10:  # Listen for 10 seconds
                     print("Listening timeout.")
                     break
@@ -64,13 +66,12 @@ class Utilities:
             stream.stop_stream()
             stream.close()
             p.terminate()
+        print("nigga")
 
     def getTime(self):
-        import time
         return time.ctime()
 
     def getDate(self):
-        from datetime import datetime
         now = datetime.now()
         speech_friendly_date = now.strftime("%B %d, %Y").replace(" 0", " ")
         day = now.day
@@ -82,7 +83,6 @@ class Utilities:
         return final_date
 
     def getWeather(self, city: str):
-        import requests
         api_key = "054b217266c57c45c2c6dca381babd9f"
         url = f"http://api.openweathermap.org/data/2.5/weather?q={city},in&appid={api_key}"
         response = requests.get(url)
@@ -105,27 +105,20 @@ class Utilities:
             "location": data["name"],
         }
         weather = Gpt.generate_text_response(f"Generate a concise weather report with given data.\n{finalData}")
-        # weather = 'it is good weather today.'
         return weather
 
-
     def getNews(self):
-        import requests
         api_key = "67971eebe05d4dffaed478cf1560f4cd"
         url = f"https://newsapi.org/v2/top-headlines?country=in&apiKey={api_key}"
         response = requests.get(url)
         data = response.json()
         articles = data["articles"]
         newsList = []
-
-        # Randomly select 5 articles
         selected_articles = random.sample(articles, 5)
-
         for article in selected_articles:
             news = Gpt.generate_text_response(f"Generate a concise news report with given data.\n{article}")
             self.playChime('success')
             newsList.append(news)
-
         return newsList
 
     def startMyDay(self):
@@ -142,23 +135,16 @@ class Utilities:
         self.speak("That's all for now. Have a great day!")
 
     def send_email(self, recipient: str, subject: str, content: str):
-        from email.mime.multipart import MIMEMultipart
-        from email.mime.text import MIMEText
-        import smtplib
-
         sender_email = "your_email@gmail.com"
         sender_password = "your_password"
         smtp_server = "smtp.gmail.com"
         smtp_port = 587
-
         message = MIMEMultipart()
         message["From"] = sender_email
         message["To"] = recipient
         message["Subject"] = subject
-
         body = f"{content}\n\nSent from your assistant."
         message.attach(MIMEText(body, "plain"))
-
         server = smtplib.SMTP(smtp_server, smtp_port)
         server.starttls()
         server.login(sender_email, sender_password)
@@ -166,22 +152,17 @@ class Utilities:
         server.quit()
 
     def captureImage(self):
-        # Delay for 2 seconds
-        time.sleep(1)
-        
+        time.sleep(1)  # Delay for 1 second
         camera = cv2.VideoCapture(0)
         if not camera.isOpened():
             self.playChime('error')
             raise Exception("Failed to open camera")
-        
         camera.set(cv2.CAP_PROP_FRAME_WIDTH, 1920)
         camera.set(cv2.CAP_PROP_FRAME_HEIGHT, 1080)
-
         ret, frame = camera.read()
         if not ret:
             self.playChime('error')
             raise Exception("Failed to capture image")
-
         cv2.imwrite(r"F:\ai-assistant\pico-files\assets\image.jpg", frame)
         self.playChime('success')
-        camera.release()  
+        camera.release()

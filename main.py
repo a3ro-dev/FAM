@@ -13,7 +13,7 @@ import yaml
 Gpt = gpt.Generation()
 Util = utilities.Utilities()
 
-with open('pico-files/conf/config.yaml', 'r') as file:
+with open(r'F:\ai-assistant\pico-files\conf\config.yaml', 'r') as file:
     config = yaml.safe_load(file)
 
 access_key = config['main']['access_key']
@@ -30,7 +30,7 @@ class PorcupineListener:
         self.porcupine = None
         self.audio_stream = None
         self.is_running = False
-        self.music_player = musicP.MusicPlayer(music_path, shuffle=True)
+        self.music_player = musicP.MusicPlayer(r"F:\ai-assistant\pico-files\music", shuffle=True)
 
     def init_porcupine(self):
         try:
@@ -58,7 +58,7 @@ class PorcupineListener:
     
         while self.is_running:
             if self.porcupine is not None and self.audio_stream is not None:
-                pcm = self.audio_stream.read(self.porcupine.frame_length)
+                pcm = self.audio_stream.read(self.porcupine.frame_length, exception_on_overflow=False)
                 pcm = struct.unpack_from("h" * self.porcupine.frame_length, pcm)
     
                 keyword_index = self.porcupine.process(pcm)
@@ -69,41 +69,39 @@ class PorcupineListener:
     def on_keyword_detected(self):
         print("Keyword detected!")
         Util.speak("Keyword detected. Listening for your command...")
-        if self.music_player.is_playing:  # Check if music is playing
+        if self.music_player.is_playing:
             self.music_player.set_volume(20)
         command = Util.getSpeech()
         print(f"Recognized command: {command}")
-        if command and "music" in command:  # Check if command is related to music
-            self.process_command(command)
-        elif self.music_player.is_playing:  # Check if music is playing
+        if self.music_player.is_playing:
             Util.speak("Please stop the music player first by saying 'stop music'.")
         else:
-            self.process_command(command)  # Process non-music commands
-        if self.music_player.is_playing:  # Check if music is playing
-            self.music_player.set_volume(100)  # Set volume back to 100
+            self.process_command(command)
+        if self.music_player.is_playing:
+            self.music_player.set_volume(100)
 
     def process_command(self, command):
         print(f"Processing command: {command}")
-        if "how are you" in command or "hi" in command or "hello" in command or "wassup" in command or "what's up" in command or "hey" in command or "sup" in command:
+        if any(greet in command for greet in ["how are you", "hi", "hello", "wassup", "what's up", "hey", "sup"]):
             for _ in range(10):
                 reply = str(Gpt.live_chat_with_ai(str(command)))
                 Util.speak(reply)
                 command = Util.getSpeech()
-                if command is not None and ("bye" in command or "goodbye" in command or "stop" in command):
+                if command and any(bye in command for bye in ["bye", "goodbye", "stop"]):
                     Util.speak("Goodbye! Have a nice day.")
                     break
-        elif "time" in command or "what time is it" in command or "current time" in command:
+        elif any(time in command for time in ["time", "what time is it", "current time"]):
             Util.speak(Util.getTime())
-        elif "date" in command or "what's the date" in command or "current date" in command:
+        elif any(date in command for date in ["date", "what's the date", "current date"]):
             Util.speak(Util.getDate())
         elif "vision" in command or "eyes" in command:
             Util.captureImage()
             reply = str(Gpt.generate_text_with_image(f"{command}", r"F:\ai-assistant\pico-files\assets\image.jpg"))
             Util.playChime('load')
             Util.speak(reply)
-        elif "start" in command or "start my day" in command or "good morning" in command:
+        elif any(start in command for start in ["start", "start my day", "good morning"]):
             Util.startMyDay()
-        elif "news" in command or "daily news" in command or "what's happening" in command or "what's the news" in command:
+        elif any(news in command for news in ["news", "daily news", "what's happening", "what's the news"]):
             Util.speak("Here are the top news headlines...")
             news = Util.getNews()
             for headline in news:
@@ -120,16 +118,9 @@ class PorcupineListener:
         elif "stop" in command:
             Util.speak("Stopping music...")
             self.music_player.stop_music()
-        elif "next" in command or "skip" in command:
+        elif any(skip in command for skip in ["next", "skip"]):
             Util.speak("Playing next track...")
             self.music_player.play_next()
-        # elif "volume" in command:
-        #     try:
-        #         volume = int(command.split()[-1])
-        #         Util.speak(f"Setting volume to {volume}")
-        #         self.music_player.set_volume(volume)
-        #     except ValueError:
-        #         Util.speak("Invalid volume level. Please provide a number between 1 and 100.")
         elif "seek forward" in command:
             try:
                 seconds = 10
@@ -142,7 +133,6 @@ class PorcupineListener:
             self.stop()
             sys.exit(0)
         else:
-            # Find the closest match to the command
             close_matches = difflib.get_close_matches(command, commands, n=1)
             if close_matches:
                 closest_match = close_matches[0]
@@ -170,11 +160,10 @@ class PorcupineListener:
 keyword_path = ""
 if platform.system() == "Windows":
     keyword_path = r"F:\ai-assistant\pico-files\model\wake-mode\Hey-Fam_en_windows_v3_0_0.ppn"
-elif platform.machine() == "armv6l":  # Raspberry Pi Zero 2 W uses ARMv6 architecture
+elif platform.machine() == "armv6l":
     keyword_path = r"F:\ai-assistant\pico-files\model\wake-mode\Hey-Fam_en_raspberry-pi_v3_0_0.ppn"
 
-porcupine_listener = PorcupineListener(access_key="DGN57sdflXC4x5AmT5Q9e0xl7D0fyxSMWjF4um8+aFR3OTLsEE6eZA==",
-                                       keyword_path=keyword_path)
+porcupine_listener = PorcupineListener(access_key=access_key, keyword_path=keyword_path)
 
 def main():
     porcupine_listener.run_in_thread()
