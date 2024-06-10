@@ -10,6 +10,12 @@ import platform
 import difflib
 import yaml
 
+
+# model_path = r'F:\ai-assistant\pico-files\model\vosk-model-small-en-in-0.4'
+# model = Model(model_path)
+# recognizer = KaldiRecognizer(model, 16000)
+
+
 Gpt = gpt.Generation()
 Util = utilities.Utilities()
 
