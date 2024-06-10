@@ -7,6 +7,10 @@ import cv2
 from gtts import gTTS
 import speech_recognition as sr
 
+# model_path = r'F:\ai-assistant\pico-files\model\vosk-model-small-en-in-0.4'
+# model = Model(model_path)
+# recognizer = KaldiRecognizer(model, 16000)
+
 Gpt = gpt.Generation()
 
 class Utilities:
