@@ -3,8 +3,35 @@ import random
 import threading
 import time
 import pygame
+import libs.utilities as utilities
 
 class MusicPlayer:
+    """
+    A class that represents a music player.
+
+    Attributes:
+        music_directory (str): The directory where the music files are located.
+        shuffle (bool): A flag indicating whether to shuffle the playlist.
+        playlist (list): A list of music files in the directory.
+        current_index (int): The index of the currently playing music in the playlist.
+        is_playing (bool): A flag indicating whether music is currently playing.
+        is_paused (bool): A flag indicating whether music is currently paused.
+        lock (threading.Lock): A lock to synchronize access to shared resources.
+        utils (utilities.Utilities): An instance of the Utilities class.
+
+    Methods:
+        load_playlist(): Loads the playlist by scanning the music directory.
+        play_music(): Plays the music from the playlist.
+        play_music_thread(): Starts a new thread to play the music.
+        play_next(): Plays the next music in the playlist.
+        pause_music(): Pauses the currently playing music.
+        unpause_music(): Unpauses the currently paused music.
+        stop_music(): Stops the currently playing music.
+        set_volume(volume: int): Sets the volume of the music player.
+        seek_forward(seconds): Seeks forward in the currently playing music.
+
+    """
+
     def __init__(self, music_directory, shuffle=False):
         pygame.mixer.init()
         self.music_directory = music_directory
@@ -14,6 +41,7 @@ class MusicPlayer:
         self.is_playing = False
         self.is_paused = False
         self.lock = threading.Lock()
+        self.utils = utilities.Utilities()
 
     def load_playlist(self):
         if not os.path.isdir(self.music_directory):
@@ -25,20 +53,25 @@ class MusicPlayer:
             if not self.playlist:
                 print("No music files found in the directory.")
                 return
-
+    
             if self.shuffle:
                 random.shuffle(self.playlist)
-
+    
             self.is_playing = True
             self.is_paused = False
             try:
-                pygame.mixer.music.load(self.playlist[self.current_index])
+                current_song = self.playlist[self.current_index]
+                pygame.mixer.music.load(current_song)
                 pygame.mixer.music.play()
+                song_name = os.path.basename(current_song)
+                song_name_without_extension = os.path.splitext(song_name)[0]
+                now_playing = f"Now Playing: {song_name_without_extension}"
+                self.utils.speak(now_playing)
             except pygame.error as e:
                 print(f"Error playing music: {e}")
                 self.is_playing = False
                 return
-
+    
         while self.is_playing:
             if not pygame.mixer.music.get_busy() and not self.is_paused:
                 self.play_next()
@@ -92,33 +125,3 @@ class MusicPlayer:
             except pygame.error as e:
                 print(f"Error seeking forward: {e}")
 
-# def main():
-#     music = MusicPlayer(r"F:\ai-assistant\pico-files\music", shuffle=True)
-    
-#     # Using a separate thread to listen for commands
-#     def command_listener():
-#         while True:
-#             command = input("Enter a command: ")
-#             if command == "play music":
-#                 music.play_music_thread()
-#             elif command == "pause":
-#                 music.pause_music()
-#             elif command == "unpause":
-#                 music.unpause_music()
-#             elif command == "stop":
-#                 music.stop_music()
-#             elif command == "next":
-#                 music.play_next()
-#             elif command.startswith("set volume"):
-#                 _, volume = command.split()
-#                 music.set_volume(int(volume))
-#             elif command.startswith("seek forward"):
-#                 _, seconds = command.split()
-#                 music.seek_forward(int(seconds))
-
-#     command_thread = threading.Thread(target=command_listener, daemon=True)
-#     command_thread.start()
-#     command_thread.join()  # Ensuring the main thread waits for command thread to complete
-
-# if __name__ == "__main__":
-#     main()

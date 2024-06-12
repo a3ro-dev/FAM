@@ -33,8 +33,8 @@ class Utilities:
 
     def speak(self, text: str):
         tts = gTTS(text=text, lang='en', slow=False)
-        tts.save("/home/pi/FAM/pico-files/assets/cache/tts.mp3")
-        playsound("/home/pi/FAM/pico-files/assets/cache/tts.mp3")
+        tts.save("pico-files\\assets\\cache\\tts.mp3")
+        playsound("pico-files\\assets\\cache\\tts.mp3")
         print(text)
 
     # def getSpeech(self):
@@ -68,23 +68,25 @@ class Utilities:
     #         p.terminate()
 
     def getSpeech(self):
-        try:
-            r = sr.Recognizer()
-            with sr.Microphone() as source:
-                print("Listening for speech...")
-                # Adjust for ambient noise
-                r.adjust_for_ambient_noise(source, duration=1)
-                # Adjust the timeout and phrase_time_limit as needed
-                audio = r.listen(source, timeout=2)
+        # try:
+        #     r = sr.Recognizer()
+        #     with sr.Microphone() as source:
+        #         print("Listening for speech...")
+        #         # Adjust for ambient noise
+        #         r.adjust_for_ambient_noise(source, duration=1)
+        #         # Adjust the timeout and phrase_time_limit as needed
+        #         audio = r.listen(source, timeout=2)
             
-            text = r.recognize(audio)
-            print(f"Recognized speech: {text}")
-            self.playChime('success')
-            return str(text)
-        except Exception as e:
-            self.playChime('error')
-            return f"Error in getSpeech: {e}"
-        
+        #     text = r.recognize(audio)
+        #     print(f"Recognized speech: {text}")
+        #     self.playChime('success')
+        #     return str(text)
+        # except Exception as e:
+        #     self.playChime('error')
+        #     return f"Error in getSpeech: {e}"
+
+        text = str(input("Enter a command: "))
+        return text        
     def getTime(self):
         import time
         return time.ctime()

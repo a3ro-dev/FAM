@@ -8,3 +8,4 @@ venv/
 *.env
 .idea/
 .vscode/
+assets/cache/tts.mp3

@@ -1,13 +1,22 @@
 import os
 import concurrent.futures
+import argparse
+import logging
+logging.getLogger('moviepy').setLevel(logging.CRITICAL)
 from pytube import YouTube
 from moviepy.editor import AudioFileClip
 from youtube_search import YoutubeSearch
 from fuzzywuzzy import fuzz
 
+
+
 class MusicSearch:
     def __init__(self):
         self.output_path = 'F:\\ai-assistant\\pico-files\\music'
+        self.executor = concurrent.futures.ThreadPoolExecutor()
+
+    def shutdown(self):
+        self.executor.shutdown(wait=True)
 
     def search_local_music(self, song_name):
         for filename in os.listdir(self.output_path):
@@ -23,7 +32,7 @@ class MusicSearch:
             if not results:
                 print(f"No results for {song_name}")
                 return None
-            url = f"https://www.youtube.com{results[0]['url_suffix']}" #type: ignore
+            url = f"https://www.youtube.com{results[0]['url_suffix']}"  # type: ignore
             return url
         except Exception as e:
             print(f"Error searching YouTube: {e}")
@@ -62,11 +71,25 @@ class MusicSearch:
         if not url:
             return None
 
-        with concurrent.futures.ThreadPoolExecutor() as executor:
-            future_download = executor.submit(self.download_audio, url)
-            video_path = future_download.result()
+        future_download = self.executor.submit(self.download_audio, url)
+        video_path = future_download.result()
 
         if video_path:
             audio_path = self.convert_to_mp3(video_path)
             return audio_path
         return None
+
+def main():
+    parser = argparse.ArgumentParser(description='Search and download a song.')
+    parser.add_argument('song_name', type=str, help='The name of the song to search and download.')
+    args = parser.parse_args()
+
+    music_search = MusicSearch()
+    try:
+        path = music_search.search_and_download_music(args.song_name)
+        print(path)
+    finally:
+        music_search.shutdown()
+# Example usage
+if __name__ == "__main__":
+    main()

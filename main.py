@@ -1,24 +1,25 @@
 import pyaudio
-import struct
+import os
 import pvporcupine
 import threading
 import libs.gpt as gpt
 import libs.music as musicP
+import libs.music_search as musicSearch
 import libs.utilities as utilities
 import sys
 import platform
 import difflib
 import yaml
+import subprocess
 
 
 Gpt = gpt.Generation()
 Util = utilities.Utilities()
 
-with open('/home/pi/FAM/pico-files/conf/config.yaml', 'r') as file:
+with open(r'pico-files\conf\config.yaml', 'r') as file:
     config = yaml.safe_load(file)
 
 access_key = config['main']['access_key']
-keyword_path = config['main']['keyword_path']
 music_path = config['main']['music_path']
 
 commands = {"how are you", "hi", "hello", "wassup", "what's up", "hey", "sup", "time", "what time is it", "current time", "date", "what's the date", "current date", "vision", "eyes", "start", "start my day", "good morning", "news", "daily news", "what's happening", "what's the news", "play music", "pause", "resume", "stop", "next", "skip", "seek forward", "shut down"}
@@ -31,6 +32,7 @@ class PorcupineListener:
         self.porcupine = None
         self.audio_stream = None
         self.is_running = False
+        self.musicSearch = musicSearch.MusicSearch()
         self.music_player = musicP.MusicPlayer(music_path, shuffle=True)
 
     def init_porcupine(self):
@@ -52,20 +54,24 @@ class PorcupineListener:
             )
 
     def start(self):
-        self.init_porcupine()
-        self.init_audio_stream()
-        self.is_running = True
-        print("Listening for keyword...")
+        # self.init_porcupine()
+        # self.init_audio_stream()
+        # self.is_running = True
+        # print("Listening for keyword...")
     
-        while self.is_running:
-            if self.porcupine is not None and self.audio_stream is not None:
-                pcm = self.audio_stream.read(self.porcupine.frame_length, exception_on_overflow=False)
-                pcm = struct.unpack_from("h" * self.porcupine.frame_length, pcm)
+        # while self.is_running:
+        #     if self.porcupine is not None and self.audio_stream is not None:
+        #         pcm = self.audio_stream.read(self.porcupine.frame_length, exception_on_overflow=False)
+        #         pcm = struct.unpack_from("h" * self.porcupine.frame_length, pcm)
     
-                keyword_index = self.porcupine.process(pcm)
-                if keyword_index >= 0:
-                    self.on_keyword_detected()
-                    print("Listening for keyword...")
+        #         keyword_index = self.porcupine.process(pcm)
+        #         if keyword_index >= 0:
+        #             self.on_keyword_detected()
+        #             print("Listening for keyword...")
+        wake = str(input("Enter 'hey fam' to begin listening for the keyword: "))
+        if wake == "hey fam":
+            self.on_keyword_detected()
+            print("Listening for keyword...")
 
     def on_keyword_detected(self):
         print("Keyword detected!")
@@ -78,7 +84,7 @@ class PorcupineListener:
             print(f"Error in speech recognition {e}")
             return
         print(f"Recognized command: {command}")
-        if self.music_player.is_playing and command != "stop music":
+        if self.music_player.is_playing and command != "stop music" and not any(keyword in command for keyword in ["song", "music"]):
             Util.speak("Please stop the music player first by saying 'stop music'.")
         else:
             self.process_command(command)
@@ -112,7 +118,6 @@ class PorcupineListener:
             for headline in news:
                 Util.speak(headline)
         elif "play music" in command:
-            Util.speak("Playing music...")
             self.music_player.play_music_thread()
         elif "pause" in command:
             Util.speak("Pausing music...")
@@ -137,6 +142,12 @@ class PorcupineListener:
             Util.speak("Quitting the program")
             self.stop()
             sys.exit(0)
+        elif "play" in command: 
+            song_name = command.replace("play", "").strip() # remove the word 'play' from the command, and strip any leading/trailing whitespace
+            if song_name:
+                subprocess.run(["python", r"pico-files\libs\music_search.py", song_name])
+                Util.speak(f"{song_name} will be played shortly...")
+                self.music_player.play_music_thread()
         else:
             close_matches = difflib.get_close_matches(command, commands, n=1)
             if close_matches:
@@ -164,9 +175,9 @@ class PorcupineListener:
 
 keyword_path = ""
 if platform.system() == "Windows":
-    keyword_path = r"F:\ai-assistant\pico-files\model\wake-mode\Hey-Fam_en_windows_v3_0_0.ppn"
+    keyword_path = r"pico-files\model\wake-mode\Hey-Fam_en_windows_v3_0_0.ppn"
 elif platform.machine() == "armv6l":
-    keyword_path = "/home/pi/FAM/pico-files/model/wake-mode/Hey-Fam_en_raspberry-pi_v3_0_0.ppn"
+    keyword_path = r"pico-files\model\wake-mode\Hey-Fam_en_raspberry-pi_v3_0_0.ppn"
 
 porcupine_listener = PorcupineListener(access_key=access_key, keyword_path=keyword_path)
 
