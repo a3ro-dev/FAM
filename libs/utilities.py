@@ -1,15 +1,11 @@
 import libs.gpt as gpt
 import random
-from vosk import Model, KaldiRecognizer
 from playsound import playsound
 import time
 import cv2
 from gtts import gTTS
 import speech_recognition as sr
-
-# model_path = r'F:\ai-assistant\pico-files\model\vosk-model-small-en-in-0.4'
-# model = Model(model_path)
-# recognizer = KaldiRecognizer(model, 16000)
+from functools import lru_cache
 
 Gpt = gpt.Generation()
 
@@ -33,60 +29,28 @@ class Utilities:
 
     def speak(self, text: str):
         tts = gTTS(text=text, lang='en', slow=False)
-        tts.save("pico-files\\assets\\cache\\tts.mp3")
-        playsound("pico-files\\assets\\cache\\tts.mp3")
+        tts.save("pico-files/assets/cache/tts.mp3")
+        playsound(r"F:\ai-assistant\pico-files\assets\cache\tts.mp3")
         print(text)
 
-    # def getSpeech(self):
-    #    import pyaudio
-    #     try:
-    #         p = pyaudio.PyAudio()
-    #         stream = p.open(format=pyaudio.paInt16, channels=1, rate=20000, input=True, frames_per_buffer=8192)
-    #         stream.start_stream()
-    #         print("Listening for speech...")
-    #         start_time = time.time()
-    #         while True:
-    #             data = stream.read(4096, exception_on_overflow=False)
-    #             if recognizer.AcceptWaveform(data):
-    #                 result = recognizer.Result()
-    #                 text = json.loads(result)["text"]
-    #                 print(f"Recognized speech: {text}")
-    #                 self.playChime('success')
-    #                 return str(text)
-    #             elif not recognizer.PartialResult():
-    #                 print("User stopped speaking.")
-    #                 break
-    #             if time.time() - start_time > 10:  # Listen for 10 seconds
-    #                 print("Listening timeout.")
-    #                 break
-    #     except Exception as e:
-    #         self.playChime('error')
-    #         print(f"Error in getSpeech: {e}")
-    #     finally:
-    #         stream.stop_stream()
-    #         stream.close()
-    #         p.terminate()
-
     def getSpeech(self):
-        # try:
-        #     r = sr.Recognizer()
-        #     with sr.Microphone() as source:
-        #         print("Listening for speech...")
-        #         # Adjust for ambient noise
-        #         r.adjust_for_ambient_noise(source, duration=1)
-        #         # Adjust the timeout and phrase_time_limit as needed
-        #         audio = r.listen(source, timeout=2)
+        try:
+            r = sr.Recognizer()
+            with sr.Microphone() as source:
+                print("Listening for speech...")
+                # Adjust for ambient noise
+                r.adjust_for_ambient_noise(source, duration=1)
+                # Adjust the timeout and phrase_time_limit as needed
+                audio = r.listen(source, timeout=2)
             
-        #     text = r.recognize(audio)
-        #     print(f"Recognized speech: {text}")
-        #     self.playChime('success')
-        #     return str(text)
-        # except Exception as e:
-        #     self.playChime('error')
-        #     return f"Error in getSpeech: {e}"
-
-        text = str(input("Enter a command: "))
-        return text        
+            text = r.recognize(audio)
+            print(f"Recognized speech: {text}")
+            self.playChime('success')
+            return str(text)
+        except Exception as e:
+            self.playChime('error')
+            return f"Error in getSpeech: {e}"
+           
     def getTime(self):
         import time
         return time.ctime()
@@ -99,6 +63,7 @@ class Utilities:
         speech_friendly_date = now.strftime(f"%B {day}{suffix}, %Y")
         return speech_friendly_date
 
+    @lru_cache(maxsize=32)
     def getWeather(self, city: str, api_key="054b217266c57c45c2c6dca381babd9f"):
         import requests
         url = f"http://api.openweathermap.org/data/2.5/weather?q={city},in&appid={api_key}"
@@ -136,7 +101,8 @@ class Utilities:
         except Exception as e:
             print(f"Error in getWeather: {e}")
             return None
-
+        
+    @lru_cache(maxsize=32)
     def getNews(self, api_key="67971eebe05d4dffaed478cf1560f4cd", num_articles=5):
         import requests
         url = f"https://newsapi.org/v2/top-headlines?country=in&apiKey={api_key}"
@@ -201,7 +167,7 @@ class Utilities:
             else:
                 self.speak("Sorry, I couldn't fetch the news headlines.")
     
-            self.speak("That's all for now. Have a great {part_of_day}!")
+            self.speak(f"That's all for now. Have a great {part_of_day}!")
         except Exception as e:
             self.speak(f"Sorry, I encountered an error: {e}")
 
@@ -210,8 +176,8 @@ class Utilities:
         from email.mime.text import MIMEText
         import smtplib
 
-        sender_email = "your_email@gmail.com"
-        sender_password = "your_password"
+        sender_email = "fam.assistant01@gmail.com"
+        sender_password = "vfrq hbgg hqvh yfse"
         smtp_server = "smtp.gmail.com"
         smtp_port = 587
 
@@ -220,16 +186,20 @@ class Utilities:
         message["To"] = recipient
         message["Subject"] = subject
 
-        body = f"{content}\n\nSent from your assistant."
+        body = f"{content}\n\nSent from FAM ASSISTANT"
         message.attach(MIMEText(body, "plain"))
 
-        server = smtplib.SMTP(smtp_server, smtp_port)
-        server.starttls()
-        server.login(sender_email, sender_password)
-        server.send_message(message)
-        server.quit()
+        try:
+            server = smtplib.SMTP(smtp_server, smtp_port)
+            server.starttls()
+            server.login(sender_email, sender_password)
+            server.send_message(message)
+            server.quit()
+            print("Email sent successfully.")
+        except Exception as e:
+            print(f"Failed to send email. Error: {e}")
 
-    def captureImage(self, save_path="/home/pi/FAM/pico-files/assets/image.jpg"):
+    def captureImage(self, save_path=r"pico-files\assets\image.jpg"):
         try:
             # Delay for 1 second
             time.sleep(1)
@@ -245,7 +215,7 @@ class Utilities:
             ret, frame = camera.read()
             if not ret:
                 self.playChime('error')
-                raise Exception("Failed to capture image")
+                raise Exception("Failed to capture image") 
     
             cv2.imwrite(save_path, frame)
             self.playChime('success')

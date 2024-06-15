@@ -9,3 +9,6 @@ venv/
 .idea/
 .vscode/
 assets/cache/tts.mp3
+tests/test.py
+tests/getSpeech.py
+assets/cache/tts.mp3
