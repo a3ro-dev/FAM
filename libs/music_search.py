@@ -8,8 +8,6 @@ from moviepy.editor import AudioFileClip
 from youtube_search import YoutubeSearch
 from fuzzywuzzy import fuzz
 
-
-
 class MusicSearch:
     def __init__(self):
         self.output_path = 'F:\\ai-assistant\\pico-files\\music'
