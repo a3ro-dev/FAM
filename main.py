@@ -11,6 +11,7 @@ import platform
 import difflib
 import yaml
 import subprocess
+import libs.clock as clock
 
 
 Gpt = gpt.Generation()
@@ -22,7 +23,7 @@ with open(r'pico-files\conf\config.yaml', 'r') as file:
 access_key = config['main']['access_key']
 music_path = config['main']['music_path']
 
-commands = {"how are you", "hi", "hello", "wassup", "what's up", "hey", "sup", "time", "what time is it", "current time", "date", "what's the date", "current date", "vision", "eyes", "start", "start my day", "good morning", "news", "daily news", "what's happening", "what's the news", "play music", "pause", "resume", "stop", "next", "skip", "seek forward", "shut down"}
+commands = {"search task", "search for task", "how are you", "hi", "hello", "wassup", "what's up", "hey", "sup", "time", "what time is it", "current time", "date", "what's the date", "current date", "vision", "eyes", "start", "start my day", "good morning", "news", "daily news", "what's happening", "what's the news", "play music", "pause", "resume", "stop", "next", "skip", "add task", "seek forward", "shut down"}
 
 class PorcupineListener:
     def __init__(self, access_key, keyword_path):
@@ -34,6 +35,7 @@ class PorcupineListener:
         self.is_running = False
         self.musicSearch = musicSearch.MusicSearch()
         self.music_player = musicP.MusicPlayer(music_path, shuffle=True)
+        self.task_manager = clock.TaskManager()
 
     def init_porcupine(self):
         try:
@@ -148,6 +150,25 @@ class PorcupineListener:
                 subprocess.run(["python", r"pico-files\libs\music_search.py", song_name])
                 Util.speak(f"{song_name} will be played shortly...")
                 self.music_player.play_music_thread()
+        elif any(task in command for task in ["add task", "add a task", "add a new task"]):
+            task = Util.speak("Please provide the task!")
+            if task:
+                Util.speak(f"Adding task: {task}")
+                self.task_manager.add_task_at_start(task)
+        
+        elif any(search in command for search in ["search task", "search for task"]):
+            task = Util.speak("Please provide the task to search for!")
+            if task:
+                Util.speak(f"Searching for task: {task}")
+                # Assuming self.task_manager.tasks is a list of task names
+                # If tasks are stored differently, adjust the following line accordingly
+                tasks = [task.name for task in self.task_manager.display_tasks()]  # Adjust based on actual task list structure
+                close_matches = difflib.get_close_matches(task, tasks, n=1, cutoff=0.7)  # Adjust cutoff as needed
+                if close_matches:
+                    matched_task = close_matches[0]
+                    self.task_manager.search_task(matched_task)
+                else:
+                    Util.speak("No matching task found.")
         else:
             close_matches = difflib.get_close_matches(command, commands, n=1)
             if close_matches:

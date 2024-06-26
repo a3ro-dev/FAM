@@ -1,36 +1,29 @@
 import threading
-import libs.gpt as gpt
-gen = gpt.Generation()
+# import libs.gpt as gpt
+# gen = gpt.Generation()
+import doubly_linked_list as dll
+import datetime
 
-class Clock:
+class TaskManager:
     def __init__(self):
-        self.todo_list = []
-        self.timer = None
+        self.tasks = dll.DoublyLinkedList()
+        self.last_reset_time = datetime.datetime.now()
 
-    def add_todo(self, task):
-        self.todo_list.append(task)
+    def check_and_reset_if_needed(self):
+        current_time = datetime.datetime.now()
+        if (current_time - self.last_reset_time) > datetime.timedelta(hours=24):
+            self.tasks = dll.DoublyLinkedList()  # Reset the tasks list
+            self.last_reset_time = current_time
+            print("Task list has been reset.")
 
-    def remove_todo(self, task):
-        if task in self.todo_list:
-            self.todo_list.remove(task)
+    def add_task_at_start(self, task_name):
+        self.check_and_reset_if_needed()
+        self.tasks.insertAtStart(task_name)
 
-    def view_todos(self):
-        return self.todo_list
+    def search_task(self, task_name):
+        self.check_and_reset_if_needed()
+        return self.tasks.searchDLList(task_name)
 
-    def set_timer(self, seconds):
-        if self.timer is not None:
-            self.timer.cancel()
-        self.timer = threading.Timer(seconds, self.timer_callback)
-        self.timer.start()
-
-    def timer_callback(self):
-        print("Timer finished!")
-
-# Usage
-module = Clock()
-module.add_todo("Finish project")
-module.add_todo("Review code")
-print(module.view_todos())  # ["Finish project", "Review code"]
-module.remove_todo("Finish project")
-print(module.view_todos())  # ["Review code"]
-module.set_timer(5)  # Sets a timer for 5 seconds
+    def display_tasks(self):
+        self.check_and_reset_if_needed()
+        return self.tasks.to_list()

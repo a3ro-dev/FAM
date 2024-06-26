@@ -3,6 +3,7 @@ import neopixel #type: ignore
 import time
 import math
 import random
+import threading
 
 class RGBRingLight:
     def __init__(self, pixel_pin, num_pixels, brightness=0.3, pixel_order=neopixel.GRB):
@@ -25,6 +26,33 @@ class RGBRingLight:
 class Led24BitEffects(RGBRingLight):
     def __init__(self, pixel_pin=board.D18, num_pixels=24, brightness=0.3, pixel_order=neopixel.GRB):
         super().__init__(pixel_pin, num_pixels, brightness, pixel_order)
+        self.ambient_effect_running = False
+        self.effect_running = False
+
+    def start_ambient_effect(self):
+        self.ambient_effect_running = True
+        while self.ambient_effect_running:
+            self.blue_breathing_effect()  # Example ambient effect
+
+    def stop_ambient_effect(self):
+        self.ambient_effect_running = False
+
+    def blue_breathing_effect(self, duration=10):
+        start_time = time.time()
+        while self.ambient_effect_running and (time.time() - start_time < duration):
+            brightness = (math.sin((time.time() % 1) * 2 * math.pi) + 1) / 2
+            blue_value = int(255 * brightness)
+
+            for i in range(self.num_pixels):
+                self.pixels[i] = (0, 0, blue_value)
+            self.pixels.show()
+
+            time.sleep(0.01)
+
+        if not self.ambient_effect_running:
+            for i in range(self.num_pixels):
+                self.pixels[i] = (0, 0, 0)
+            self.pixels.show()
 
     def firefly(self, wait, duration=5):
         start_time = time.time()
@@ -100,21 +128,34 @@ class Led24BitEffects(RGBRingLight):
             self.pixels.show()
             time.sleep(wait)
 
-def main():
-    led_effects = Led24BitEffects()
-    start_time = time.time()  # get the current time
 
-    while True:
-        if time.time() - start_time < 5:
-            led_effects.bouncing_ball(0.05)
-        elif time.time() - start_time < 10:
-            led_effects.comet(0.02)
-        elif time.time() - start_time < 15:
-            led_effects.vortex(0.01)
-        elif time.time() - start_time < 20:
-            led_effects.firefly(5/255.0)  # adjust the wait time to ensure the effect lasts approximately 5 seconds
-        else:
-            start_time = time.time()  # reset the start time
+    def start_progress_effect(self, song_duration):
+        self.effect_running = True
+        effect_thread = threading.Thread(target=self._progress_effect, args=(song_duration,))
+        effect_thread.start()
+
+    def _progress_effect(self, song_duration):
+        start_time = time.time()
+        while self.effect_running:
+            elapsed_time = time.time() - start_time
+            leds_to_light = int((elapsed_time / song_duration) * self.num_pixels)
+            for i in range(self.num_pixels):
+                if i < leds_to_light:
+                    self.pixels[i] = (255, 255, 255)  # Example: light up in white
+                else:
+                    self.pixels[i] = (0, 0, 0)  # Turn off the LED
+            self.pixels.show()
+            if elapsed_time >= song_duration:
+                break  # Optional: Stop the effect when the song duration is reached
+            time.sleep(10)  # Update every 10 seconds
+
+    def stop_effect(self):
+        self.effect_running = False
+        # Optional: Turn off all LEDs when stopping the effect
+        for i in range(self.num_pixels):
+            self.pixels[i] = (0, 0, 0)
+        self.pixels.show()
+        
 
 if __name__ == "__main__":
-    main()
+    pass

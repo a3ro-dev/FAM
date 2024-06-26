@@ -4,6 +4,7 @@ import threading
 import time
 import pygame
 import libs.utilities as utilities
+import libs.rgb as rgb
 
 class MusicPlayer:
     """
@@ -42,6 +43,7 @@ class MusicPlayer:
         self.is_paused = False
         self.lock = threading.Lock()
         self.utils = utilities.Utilities()
+        self.rgb_control = rgb.Led24BitEffects()  # Assuming RGBControl is defined elsewhere
 
     def load_playlist(self):
         if not os.path.isdir(self.music_directory):
@@ -53,10 +55,10 @@ class MusicPlayer:
             if not self.playlist:
                 print("No music files found in the directory.")
                 return
-    
+
             if self.shuffle:
                 random.shuffle(self.playlist)
-    
+
             self.is_playing = True
             self.is_paused = False
             try:
@@ -66,14 +68,20 @@ class MusicPlayer:
                 song_name = os.path.basename(current_song)
                 song_name_without_extension = os.path.splitext(song_name)[0]
                 now_playing = f"Now Playing: {song_name_without_extension}"
-                self.utils.speak(now_playing)
+                self.utils.speak(now_playing)  # Assuming utils.speak is defined elsewhere
+            
+                # Start RGB effect
+                self.rgb_control.start_progress_effect(song_duration=pygame.mixer.Sound(current_song).get_length())
+            
             except pygame.error as e:
                 print(f"Error playing music: {e}")
                 self.is_playing = False
                 return
-    
+
         while self.is_playing:
             if not pygame.mixer.music.get_busy() and not self.is_paused:
+                # Stop RGB effect when the music stops
+                self.rgb_control.stop_effect()
                 self.play_next()
             time.sleep(1)
 
@@ -110,6 +118,8 @@ class MusicPlayer:
             pygame.mixer.music.stop()
             if self.thread is not None:
                 self.thread.join()
+            # Stop RGB effect when the music stops
+            self.rgb_control.stop_effect()
 
     def set_volume(self, volume: int):
         if 0 <= volume <= 100:
