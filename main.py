@@ -193,11 +193,7 @@ class PorcupineListener:
         self.thread = threading.Thread(target=self.start)
         self.thread.start()
 
-keyword_path = ""
-if platform.system() == "Windows":
-    keyword_path = r"pico-files\model\wake-mode\Hey-Fam_en_windows_v3_0_0.ppn"
-elif platform.machine() == "armv6l":
-    keyword_path = r"pico-files\model\wake-mode\Hey-Fam_en_raspberry-pi_v3_0_0.ppn"
+keyword_path = "/home/pi/FAM/model/wake-mode/Hey-Fam_en_raspberry-pi_v3_0_0.ppn"
 
 porcupine_listener = PorcupineListener(access_key=access_key, keyword_path=keyword_path)
 
