@@ -180,8 +180,8 @@ if __name__ == "__main__":
         (ring_light.vortex, {'wait': 0.05}),
         (ring_light.start_progress_effect, {'song_duration': 5})
     ]
-
 for effect, kwargs in effects:
     # Check if 'duration' is in kwargs, use it; otherwise, use 5 as the default duration
     duration = kwargs.pop('duration', 5)
+    print(f"Activating effect: {effect.__name__}")
     run_effect_for_duration(effect, duration, **kwargs)

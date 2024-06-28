@@ -16,3 +16,4 @@ playsound
 adafruit
 circuitpython
 neopixel
+Adafruit-Blinka
