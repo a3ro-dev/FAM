@@ -9,16 +9,31 @@ from functools import lru_cache
 import pyaudio
 import libs.rgb as rgb
 import threading
+import yaml
+
+with open('conf/config.yaml') as file:
+    config = yaml.safe_load(file)
+
+emailID = config['email']['sender_email']
+emailPasswd = config['utilities']['email']['sender_password']
+imgPath = config['utilities']['image_path']
+author = config['utilities']['author']
+success = config['utilities']['audio_files']['success']
+error = config['utilities']['audio_files']['error']
+load = config['utilities']['audio_files']['load']
+newsAPI = config['utilities']['news_api_key']
+weatherAPI = config['utilities']['weather_api_key']
+
 
 Gpt = gpt.Generation()
 RGBtop = rgb.Led24BitEffects()
 class Utilities:
     def __init__(self):
-        self.author = "AKSHAT SINGH KUSHWAHA"
+        self.author = author    
         self.audio_files = {
-            "success": "/home/pi/FAM/pico-files/assets/audio/success.mp3",
-            "error": "/home/pi/FAM/pico-files/assets/audio/error.mp3",
-            "load": "/home/pi/FAM/pico-files/assets/audio/load.mp3"
+            "success": success,
+            "error": error,
+            "load": load
         }
 
     def playChime(self, type: str):
@@ -78,7 +93,7 @@ class Utilities:
         return speech_friendly_date
 
     @lru_cache(maxsize=32)
-    def getWeather(self, city: str, api_key="054b217266c57c45c2c6dca381babd9f"):
+    def getWeather(self, city: str, api_key=weatherAPI):
         import requests
         url = f"http://api.openweathermap.org/data/2.5/weather?q={city},in&appid={api_key}"
         try:
@@ -117,7 +132,7 @@ class Utilities:
             return None
         
     @lru_cache(maxsize=32)
-    def getNews(self, api_key="67971eebe05d4dffaed478cf1560f4cd", num_articles=5):
+    def getNews(self, api_key=newsAPI, num_articles=5):
         import requests
         url = f"https://newsapi.org/v2/top-headlines?country=in&apiKey={api_key}"
         try:
@@ -190,8 +205,8 @@ class Utilities:
         from email.mime.text import MIMEText
         import smtplib
 
-        sender_email = "fam.assistant01@gmail.com"
-        sender_password = "vfrq hbgg hqvh yfse"
+        sender_email = emailID
+        sender_password = emailPasswd
         smtp_server = "smtp.gmail.com"
         smtp_port = 587
 
@@ -213,7 +228,7 @@ class Utilities:
         except Exception as e:
             print(f"Failed to send email. Error: {e}")
 
-    def captureImage(self, save_path=r"pico-files\assets\image.jpg"):
+    def captureImage(self, save_path=imgPath):
         try:
             # Delay for 1 second
             time.sleep(1)

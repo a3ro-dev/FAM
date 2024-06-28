@@ -7,10 +7,15 @@ from pytube import YouTube
 from moviepy.editor import AudioFileClip
 from youtube_search import YoutubeSearch
 from fuzzywuzzy import fuzz
+import yaml 
 
+with open('conf/config.yaml') as file:
+    config = yaml.safe_load(file)
+
+musicPath = config['main']['music_path']
 class MusicSearch:
     def __init__(self):
-        self.output_path = 'F:\\ai-assistant\\pico-files\\music'
+        self.output_path = musicPath
         self.executor = concurrent.futures.ThreadPoolExecutor()
 
     def shutdown(self):

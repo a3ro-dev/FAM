@@ -24,15 +24,15 @@ class RGBRingLight:
             return (0, pos * 3, 255 - pos * 3)
 
 class Led24BitEffects(RGBRingLight):
-    def __init__(self, pixel_pin=board.D18, num_pixels=24, brightness=0.3, pixel_order=neopixel.GRB):
+    def __init__(self, pixel_pin=board.D18, num_pixels=23, brightness=0.3, pixel_order=neopixel.GRB):  # Adjusted num_pixels to 23
         super().__init__(pixel_pin, num_pixels, brightness, pixel_order)
         self.ambient_effect_running = False
         self.effect_running = False
 
     def start_ambient_effect(self):
         self.ambient_effect_running = True
-        while self.ambient_effect_running:
-            self.blue_breathing_effect()  # Example ambient effect
+        ambient_thread = threading.Thread(target=self.blue_breathing_effect)  # Use threading for ambient effect
+        ambient_thread.start()
 
     def stop_ambient_effect(self):
         self.ambient_effect_running = False
@@ -147,7 +147,7 @@ class Led24BitEffects(RGBRingLight):
             self.pixels.show()
             if elapsed_time >= song_duration:
                 break  # Optional: Stop the effect when the song duration is reached
-            time.sleep(10)  # Update every 10 seconds
+            time.sleep(5)  # Adjusted to update every second for smoother progress
 
     def stop_effect(self):
         self.effect_running = False
@@ -155,33 +155,3 @@ class Led24BitEffects(RGBRingLight):
         for i in range(self.num_pixels):
             self.pixels[i] = (0, 0, 0)
         self.pixels.show()
-
-def run_effect_for_duration(effect_function, duration, *args, **kwargs):
-    effect_thread = threading.Thread(target=effect_function, args=args, kwargs=kwargs)
-    effect_thread.start()
-    time.sleep(duration)
-    if hasattr(effect_function.__self__, 'stop_ambient_effect'):
-        effect_function.__self__.stop_ambient_effect()
-    if hasattr(effect_function.__self__, 'stop_effect'):
-        effect_function.__self__.stop_effect()
-    effect_thread.join()
-
-if __name__ == "__main__":
-    ring_light = Led24BitEffects()
-
-    # List of effects to run
-    effects = [
-        (ring_light.blue_breathing_effect, {'duration': 5}),
-        (ring_light.firefly, {'wait': 0.05, 'duration': 5}),
-        (ring_light.rainbow_cycle, {'wait': 0.05}),
-        (ring_light.gradient, {'wait': 5}),
-        (ring_light.bouncing_ball, {'wait': 0.05}),
-        (ring_light.comet, {'wait': 0.05}),
-        (ring_light.vortex, {'wait': 0.05}),
-        (ring_light.start_progress_effect, {'song_duration': 5})
-    ]
-for effect, kwargs in effects:
-    # Check if 'duration' is in kwargs, use it; otherwise, use 5 as the default duration
-    duration = kwargs.pop('duration', 5)
-    print(f"Activating effect: {effect.__name__}")
-    run_effect_for_duration(effect, duration, **kwargs)

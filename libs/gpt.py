@@ -1,6 +1,12 @@
 import base64
 import requests
 from groq import Groq
+import yaml
+
+with open('conf/config.yaml', 'r') as file:
+    config = yaml.safe_load(file)
+groqKey = config['main']['groq_api_key']
+openaiKey = config['main']['openai_api_key']
 
 class Generation:
     """
@@ -9,7 +15,7 @@ class Generation:
     def __init__(self):
         self.messages = []
         self.max_messages = 10
-        self.client = Groq(api_key='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')
+        self.client = Groq(api_key=groqKey)
 
     def encode_image(self, image_path: str):
         with open(image_path, "rb") as image:
@@ -40,7 +46,7 @@ class Generation:
         return response
     
     def generate_text_with_image(self, text: str, image: str):
-        api_key = 'sk-proj-K8hfsSF9vbG1ccu7Mo50T3BlbkFJXB6nXSORFrhYVjkzTWaR'
+        api_key = openaiKey
 
         # Getting the base64 string
         base64_image = self.encode_image(image)
