@@ -14,7 +14,7 @@ import yaml
 with open('conf/config.yaml') as file:
     config = yaml.safe_load(file)
 
-emailID = config['email']['sender_email']
+emailID = config['utilities']['email']['sender_email']
 emailPasswd = config['utilities']['email']['sender_password']
 imgPath = config['utilities']['image_path']
 author = config['utilities']['author']
