@@ -1,11 +1,10 @@
 import pyaudio
-import os
+import libs.utilities as Utilities
 import pvporcupine
 import threading
 import libs.gpt as gpt
 import libs.music as musicP
 import libs.music_search as musicSearch
-import libs.utilities as Utilities
 import sys
 import platform
 import difflib
