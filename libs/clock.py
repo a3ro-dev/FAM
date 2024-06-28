@@ -1,7 +1,7 @@
 import threading
 # import libs.gpt as gpt
 # gen = gpt.Generation()
-import doubly_linked_list as dll
+import libs.doubly_linked_list as dll
 import datetime
 
 class TaskManager:
