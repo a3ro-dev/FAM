@@ -181,5 +181,7 @@ if __name__ == "__main__":
         (ring_light.start_progress_effect, {'song_duration': 5})
     ]
 
-    for effect, kwargs in effects:
-        run_effect_for_duration(effect, 5, **kwargs)
+for effect, kwargs in effects:
+    # Check if 'duration' is in kwargs, use it; otherwise, use 5 as the default duration
+    duration = kwargs.pop('duration', 5)
+    run_effect_for_duration(effect, duration, **kwargs)
