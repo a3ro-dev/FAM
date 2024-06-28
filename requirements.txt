@@ -13,6 +13,5 @@ pyyaml
 gTTS
 groq
 playsound
-circuitpython
 adafruit-circuitpython-neopixel
 Adafruit-Blinka
