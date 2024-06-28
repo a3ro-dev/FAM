@@ -54,6 +54,54 @@ class Led24BitEffects(RGBRingLight):
                 self.pixels[i] = (0, 0, 0)
             self.pixels.show()
 
+    def alexa_listening_effect(self, duration=10):
+        self.ambient_effect_running = True
+        start_time = time.time()
+        while self.ambient_effect_running and (time.time() - start_time < duration):
+            for i in range(self.num_pixels):
+                if not self.ambient_effect_running:
+                    break
+                self.pixels.fill((0, 0, 0))  # Turn off all pixels
+                # Light up the current pixel
+                self.pixels[i] = (0, 0, 255)  # Blue color for Alexa effect
+                if i > 0:
+                    # Optionally, create a trail effect by lighting up the previous pixel with a dimmer light
+                    self.pixels[i - 1] = (0, 0, 128)  # Dimmer blue
+                else:
+                    # For the first pixel, the previous one is the last pixel
+                    self.pixels[self.num_pixels - 1] = (0, 0, 128)  # Dimmer blue
+                self.pixels.show()
+                time.sleep(0.1)  # Control the speed of the moving effect
+
+        # Turn off all LEDs at the end
+        self.pixels.fill((0, 0, 0))
+        self.pixels.show()
+        self.ambient_effect_running = False
+
+    def red_rotatory_fill(self, wait=0.05):
+        """Fills the circle with red color, rotating through each pixel."""
+        for i in range(self.num_pixels):
+            self.pixels.fill((0, 0, 0))  # Clear the circle
+            self.pixels[i] = (255, 0, 0)  # Set current pixel to red
+            self.pixels.show()
+            time.sleep(wait)
+
+    def blue_rotatory_fill(self, wait=0.05):
+        """Fills the circle with blue color, rotating through each pixel."""
+        for i in range(self.num_pixels):
+            self.pixels.fill((0, 0, 0))  # Clear the circle
+            self.pixels[i] = (0, 0, 255)  # Set current pixel to blue
+            self.pixels.show()
+            time.sleep(wait)
+
+    def yellow_rotatory_fill(self, wait=0.05):
+        """Fills the circle with yellow color, rotating through each pixel."""
+        for i in range(self.num_pixels):
+            self.pixels.fill((0, 0, 0))  # Clear the circle
+            self.pixels[i] = (255, 255, 0)  # Set current pixel to yellow
+            self.pixels.show()
+            time.sleep(wait)
+
     def firefly(self, wait, duration=5):
         start_time = time.time()
         for i in range(self.num_pixels):

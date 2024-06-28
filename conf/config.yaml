@@ -1,6 +1,6 @@
 main:
     access_key: "DGN57sdflXC4x5AmT5Q9e0xl7D0fyxSMWjF4um8+aFR3OTLsEE6eZA=="
-    music_path: "/home/pi/FAM//music"
+    music_path: "/home/pi/FAM/music"
     groq_api_key: "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"
     openai_api_key: "sk-proj-K8hfsSF9vbG1ccu7Mo50T3BlbkFJXB6nXSORFrhYVjkzTWaR"
     model_name: "llama3-70b-8192"

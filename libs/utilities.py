@@ -39,46 +39,78 @@ class Utilities:
     def playChime(self, type: str):
         try:
             if type in self.audio_files:
+                # Example: If the chime type is 'warning', use the yellow rotatory fill
+                if type == "load":
+                    RGBtop.yellow_rotatory_fill()
+                elif type == "success":
+                    RGBtop.blue_rotatory_fill()
+                elif type == "error":
+                    RGBtop.red_rotatory_fill()
                 playsound(self.audio_files[type])
             else:
                 raise ValueError(f"Unknown chime type: {type}")
         except Exception as e:
             print(f"Error in playChime: {e}")
+            # Optionally, use a red rotatory fill to indicate an error
+            RGBtop.red_rotatory_fill()
 
     def speak(self, text: str):
         tts = gTTS(text=text, lang='en', slow=False)
-        tts.save("pico-files/assets/cache/tts.mp3")
+        tts.save("/home/pi/FAM/assets/cache/tts.mp3")
         playsound(r"F:\ai-assistant\pico-files\assets\cache\tts.mp3")
         print(text)
 
+    # def getSpeech(self):
+    #     try:
+    #         pa = pyaudio.PyAudio()
+    #         stream = pa.open(format=pyaudio.paInt16, channels=1, rate=44100, input=True, frames_per_buffer=1024)
+    #         r = sr.Recognizer()
+    #         with sr.Microphone() as source:
+    #             print("Listening for speech...")
+    #             r.adjust_for_ambient_noise(source, duration=1)
+                
+    #             # Start ambient effect in a separate thread
+    #             ambient_thread = threading.Thread(target=RGBtop.start_ambient_effect)
+    #             ambient_thread.start()
+                
+    #             # Listen to the source, dynamically adjusting the time limit based on ongoing speech
+    #             audio = r.listen(source)
+            
+    #         text = r.recognize(audio)
+    #         print(f"Recognized speech: {text}")
+    #         self.playChime('success')
+    #     except Exception as e:
+    #         self.playChime('error')
+    #         print(f"Error in getSpeech: {e}")
+    #     finally:
+    #         # Stop the ambient effect
+    #         RGBtop.stop_ambient_effect()
+    #         if ambient_thread.is_alive():
+    #             ambient_thread.join()
+    #     return str(text)
+
     def getSpeech(self):
+        text = ""
         try:
-            pa = pyaudio.PyAudio()
-            stream = pa.open(format=pyaudio.paInt16, channels=1, rate=44100, input=True, frames_per_buffer=1024)
-            r = sr.Recognizer()
-            with sr.Microphone() as source:
-                print("Listening for speech...")
-                r.adjust_for_ambient_noise(source, duration=1)
-                
-                # Start ambient effect in a separate thread
-                ambient_thread = threading.Thread(target=RGBtop.start_ambient_effect)
-                ambient_thread.start()
-                
-                audio = r.listen(source, timeout=2)
-                
-            text = r.recognize(audio)
-            print(f"Recognized speech: {text}")
+            print("Type your input (simulating speech input):")
+            
+            # Start ambient effect in a separate thread to simulate listening
+            ambient_thread = threading.Thread(target=RGBtop.start_ambient_effect)
+            ambient_thread.start()
+            
+            # Replace speech recognition with direct input
+            text = input()
+            print(f"Received input: {text}")
             self.playChime('success')
         except Exception as e:
             self.playChime('error')
             print(f"Error in getSpeech: {e}")
         finally:
             # Stop the ambient effect
-            RGBtop.stop_ambient_effect()
+            RGBtop.stop_ambient_effect()  # Assuming this method stops the yellow_rotatory_fill effect
             if ambient_thread.is_alive():
                 ambient_thread.join()
-        return str(text)
-        
+        return text
            
     def getTime(self):
         import time
