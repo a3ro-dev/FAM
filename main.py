@@ -5,7 +5,7 @@ import threading
 import libs.gpt as gpt
 import libs.music as musicP
 import libs.music_search as musicSearch
-import libs.utilities as utilities
+from libs.utilities import Utilities
 import sys
 import platform
 import difflib
@@ -15,7 +15,7 @@ import libs.clock as clock
 
 
 Gpt = gpt.Generation()
-Util = utilities.Utilities()
+Util = Utilities()
 
 with open(r'pico-files\conf\config.yaml', 'r') as file:
     config = yaml.safe_load(file)
