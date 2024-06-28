@@ -13,3 +13,6 @@ pyyaml
 gTTS
 groq
 playsound
+adafruit
+circuitpython
+neopixel

@@ -155,7 +155,31 @@ class Led24BitEffects(RGBRingLight):
         for i in range(self.num_pixels):
             self.pixels[i] = (0, 0, 0)
         self.pixels.show()
-        
+
+def run_effect_for_duration(effect_function, duration, *args, **kwargs):
+    effect_thread = threading.Thread(target=effect_function, args=args, kwargs=kwargs)
+    effect_thread.start()
+    time.sleep(duration)
+    if hasattr(effect_function.__self__, 'stop_ambient_effect'):
+        effect_function.__self__.stop_ambient_effect()
+    if hasattr(effect_function.__self__, 'stop_effect'):
+        effect_function.__self__.stop_effect()
+    effect_thread.join()
 
 if __name__ == "__main__":
-    pass
+    ring_light = Led24BitEffects()
+
+    # List of effects to run
+    effects = [
+        (ring_light.blue_breathing_effect, {'duration': 5}),
+        (ring_light.firefly, {'wait': 0.05, 'duration': 5}),
+        (ring_light.rainbow_cycle, {'wait': 0.05}),
+        (ring_light.gradient, {'wait': 5}),
+        (ring_light.bouncing_ball, {'wait': 0.05}),
+        (ring_light.comet, {'wait': 0.05}),
+        (ring_light.vortex, {'wait': 0.05}),
+        (ring_light.start_progress_effect, {'song_duration': 5})
+    ]
+
+    for effect, kwargs in effects:
+        run_effect_for_duration(effect, 5, **kwargs)
