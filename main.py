@@ -16,7 +16,7 @@ import libs.clock as clock
 Gpt = gpt.Generation()
 Util = Utilities.Utilities()
 
-with open(r'pico-files\conf\config.yaml', 'r') as file:
+with open('conf/config.yaml') as file:
     config = yaml.safe_load(file)
 
 access_key = config['main']['access_key']
