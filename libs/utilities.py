@@ -28,6 +28,10 @@ weatherAPI = config['utilities']['weather_api_key']
 Gpt = gpt.Generation()
 RGBtop = rgb.Led24BitEffects()
 class Utilities:
+    """
+    Utilities for the app
+    """
+
     def __init__(self):
         self.author = author    
         self.audio_files = {
