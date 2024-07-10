@@ -11,6 +11,7 @@ import difflib
 import yaml
 import subprocess
 import libs.clock as clock
+import struct
 
 
 Gpt = gpt.Generation()
@@ -55,24 +56,24 @@ class PorcupineListener:
             )
 
     def start(self):
-        # self.init_porcupine()
-        # self.init_audio_stream()
-        # self.is_running = True
-        # print("Listening for keyword...")
+        self.init_porcupine()
+        self.init_audio_stream()
+        self.is_running = True
+        print("Listening for keyword...")
     
-        # while self.is_running:
-        #     if self.porcupine is not None and self.audio_stream is not None:
-        #         pcm = self.audio_stream.read(self.porcupine.frame_length, exception_on_overflow=False)
-        #         pcm = struct.unpack_from("h" * self.porcupine.frame_length, pcm)
+        while self.is_running:
+            if self.porcupine is not None and self.audio_stream is not None:
+                pcm = self.audio_stream.read(self.porcupine.frame_length, exception_on_overflow=False)
+                pcm = struct.unpack_from("h" * self.porcupine.frame_length, pcm)
     
-        #         keyword_index = self.porcupine.process(pcm)
-        #         if keyword_index >= 0:
-        #             self.on_keyword_detected()
-        #             print("Listening for keyword...")
-        wake = str(input("Enter 'hey fam' to begin listening for the keyword: "))
-        if wake == "hey fam":
-            self.on_keyword_detected()
-            print("Listening for keyword...")
+                keyword_index = self.porcupine.process(pcm)
+                if keyword_index >= 0:
+                    self.on_keyword_detected()
+                    print("Listening for keyword...")
+        # wake = str(input("Enter 'hey fam' to begin listening for the keyword: "))
+        # if wake == "hey fam":
+        #     self.on_keyword_detected()
+        #     print("Listening for keyword...")
 
     def on_keyword_detected(self):
         print("Keyword detected!")
