@@ -8,7 +8,7 @@ class Node:
     - previous (Node): A reference to the previous node in the list.
     """
     
-    def __init__(self, data: str, next: 'Node' = None, previous: 'Node' = None):
+    def __init__(self, data: str, next: 'Node' = None, previous: 'Node' = None): #type: ignore
         """
         Initializes a new Node with the given data.
         

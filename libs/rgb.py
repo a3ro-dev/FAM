@@ -4,6 +4,7 @@ import time
 import math
 import random
 import threading
+import numpy as np
 
 class RGBRingLight:
     def __init__(self, pixel_pin, num_pixels: int, brightness: float = 0.3, pixel_order=neopixel.GRB):
@@ -29,30 +30,51 @@ class Led24BitEffects(RGBRingLight):
         self.ambient_effect_running = False
         self.effect_running = False
 
+    def start_visualizer_effect(self, stream):
+        self.ambient_effect_running = True
+        offset = 0
+        while self.ambient_effect_running:
+            audio_data = np.frombuffer(stream.read(1024, exception_on_overflow=False), dtype=np.int16)
+            volume_norm = np.linalg.norm(audio_data) / 100.0
+            brightness = min(int(volume_norm * 255), 255)
+            self.visualize_speech(brightness, offset)
+            offset = (offset + 1) % self.num_pixels
+            time.sleep(0.05)
+
+    def visualize_speech(self, brightness, offset):
+        for i in range(self.num_pixels):
+            pos = (i + offset) % self.num_pixels
+            color = self.blue_shade(brightness)
+            self.pixels[pos] = color
+        self.pixels.show()
+
+    def blue_shade(self, intensity):
+        """Generate shades of blue based on intensity."""
+        intensity = max(0, min(255, intensity))
+        return (0, 0, intensity)
+
+    def stop_ambient_effect(self):
+        self.ambient_effect_running = False
+        self.clear()
+
+    def clear(self):
+        self.pixels.fill((0, 0, 0))
+        self.pixels.show()
+
     def start_ambient_effect(self) -> None:
         self.ambient_effect_running = True
         ambient_thread = threading.Thread(target=self.blue_breathing_effect)
         ambient_thread.start()
-
-    def stop_ambient_effect(self) -> None:
-        self.ambient_effect_running = False
 
     def blue_breathing_effect(self, duration: int = 10) -> None:
         start_time = time.time()
         while self.ambient_effect_running and (time.time() - start_time < duration):
             brightness = (math.sin((time.time() % 1) * 2 * math.pi) + 1) / 2
             blue_value = int(255 * brightness)
-
-            for i in range(self.num_pixels):
-                self.pixels[i] = (0, 0, blue_value)
+            self.pixels.fill((0, 0, blue_value))
             self.pixels.show()
-
             time.sleep(0.01)
-
-        if not self.ambient_effect_running:
-            for i in range(self.num_pixels):
-                self.pixels[i] = (0, 0, 0)
-            self.pixels.show()
+        self.clear()
 
     def alexa_listening_effect(self, duration: int = 10) -> None:
         self.ambient_effect_running = True
@@ -69,36 +91,18 @@ class Led24BitEffects(RGBRingLight):
                     self.pixels[self.num_pixels - 1] = (0, 0, 128)  # Dimmer blue
                 self.pixels.show()
                 time.sleep(0.1)
+        self.clear()
 
-        self.pixels.fill((0, 0, 0))
-        self.pixels.show()
-        self.ambient_effect_running = False
-
-    def red_rotatory_fill(self, wait: float = 0.05) -> None:
+    def rotatory_fill(self, color: tuple, wait: float = 0.05) -> None:
         for i in range(self.num_pixels):
             self.pixels.fill((0, 0, 0))
-            self.pixels[i] = (255, 0, 0)
-            self.pixels.show()
-            time.sleep(wait)
-
-    def blue_rotatory_fill(self, wait: float = 0.05) -> None:
-        for i in range(self.num_pixels):
-            self.pixels.fill((0, 0, 0))
-            self.pixels[i] = (0, 0, 255)
-            self.pixels.show()
-            time.sleep(wait)
-
-    def yellow_rotatory_fill(self, wait: float = 0.05) -> None:
-        for i in range(self.num_pixels):
-            self.pixels.fill((0, 0, 0))
-            self.pixels[i] = (255, 255, 0)
+            self.pixels[i] = color
             self.pixels.show()
             time.sleep(wait)
 
     def firefly(self, wait: float, duration: int = 5) -> None:
         start_time = time.time()
-        for i in range(self.num_pixels):
-            self.pixels[i] = (0, 0, 0)
+        self.clear()
         while time.time() - start_time < duration:
             index = random.randint(0, self.num_pixels - 1)
             for j in range(255):
@@ -131,8 +135,7 @@ class Led24BitEffects(RGBRingLight):
 
     def bouncing_ball(self, wait: float) -> None:
         for j in range(5):
-            for i in range(self.num_pixels):
-                self.pixels[i] = (0, 0, 0)
+            self.clear()
             pos = int((math.sin(j + time.time()) + 1) * (self.num_pixels - 1) / 2)
             self.pixels[pos] = (255, 255, 255)
             self.pixels.show()
@@ -188,9 +191,8 @@ class Led24BitEffects(RGBRingLight):
             if elapsed_time >= song_duration:
                 break
             time.sleep(5)
+        self.clear()
 
     def stop_effect(self) -> None:
         self.effect_running = False
-        for i in range(self.num_pixels):
-            self.pixels[i] = (0, 0, 0)
-        self.pixels.show()
+        self.clear()
