@@ -7,7 +7,7 @@ class TaskManager:
         self.last_reset_time = datetime.datetime.utcnow()
 
     def check_and_reset_if_needed(self) -> None:
-        current_time = datetime.datetime.utcnow()
+        current_time = datetime.datetime.now(datetime.UTC)
         if (current_time - self.last_reset_time) > datetime.timedelta(hours=24):
             self.tasks = dll.DoublyLinkedList()  # Reset the tasks list
             self.last_reset_time = current_time

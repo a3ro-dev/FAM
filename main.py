@@ -4,7 +4,7 @@ from _fam_assistant import FamAssistant
 def load_config():
     with open('conf/config.yaml') as file:
         return yaml.safe_load(file)
-
+    
 def main():
     config = load_config()
     access_key = config['main']['access_key']
