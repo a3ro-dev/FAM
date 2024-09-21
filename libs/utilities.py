@@ -17,6 +17,9 @@ from email.mime.text import MIMEText
 import smtplib
 import pyttsx3
 import pygame
+import libs.pygame_manager
+
+PygameManager = libs.pygame_manager.PygameManager()
 
 # Load configuration
 with open('conf/config.yaml') as file:
@@ -35,10 +38,6 @@ weatherAPI = config['utilities']['weather_api_key']
 Gpt = gpt.Generation()
 
 class Utilities:
-    """
-    Utilities for the app
-    """
-
     def __init__(self):
         self.author = author    
         self.audio_files = {
@@ -50,7 +49,7 @@ class Utilities:
     def playChime(self, type: str):
         try:
             if type in self.audio_files:
-                print(type)
+                PygameManager.load_and_play(self.audio_files[type])
             else:
                 raise ValueError(f"Unknown chime type: {type}")
         except Exception as e:
@@ -60,9 +59,8 @@ class Utilities:
         try:
             tts = gTTS(text=text, lang='en')
             tts.save("tts.mp3")
-            pygame.mixer.music.load("tts.mp3")
-            pygame.mixer.music.play()
-            while pygame.mixer.music.get_busy():
+            PygameManager.load_and_play("tts.mp3")
+            while PygameManager.is_busy():
                 time.sleep(0.1)
             print(text)
         except Exception as e:

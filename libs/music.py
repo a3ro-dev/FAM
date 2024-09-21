@@ -1,15 +1,4 @@
-import os
-import random
-import threading
-import time
-import pygame
-import libs.utilities as utilities
-
-# Constants for file extensions
-MUSIC_EXTENSIONS = ('.mp3', '.wav')
-
-class MusicPlayer:
-    """
+"""
     A class that represents a music player.
 
     Attributes:
@@ -33,10 +22,20 @@ class MusicPlayer:
         stop_music(): Stops the currently playing music.
         set_volume(volume: int): Sets the volume of the music player.
         seek_forward(seconds: int): Seeks forward in the currently playing music.
-    """
+"""
 
+import os
+import random
+import threading
+import time
+from pygame_manager import PygameManager
+import libs.utilities as utilities
+
+# Constants for file extensions
+MUSIC_EXTENSIONS = ('.mp3', '.wav')
+
+class MusicPlayer:
     def __init__(self, music_directory: str, shuffle: bool = False):
-        pygame.mixer.init(buffer=1024)  # Default is 3072, reduce it or increase it depending on performance
         self.music_directory = music_directory
         self.shuffle = shuffle
         self.playlist = self.load_playlist()
@@ -65,15 +64,14 @@ class MusicPlayer:
             self._play_current_song()
 
         while self.is_playing:
-            if not pygame.mixer.music.get_busy() and not self.is_paused:
+            if not PygameManager.is_busy() and not self.is_paused:
                 self.play_next()
             time.sleep(1)
 
     def _play_current_song(self):
         try:
             current_song = self.playlist[self.current_index]
-            pygame.mixer.music.load(current_song)
-            pygame.mixer.music.play()
+            PygameManager.load_and_play(current_song)
             song_name = os.path.basename(current_song)
             song_name_without_extension = os.path.splitext(song_name)[0]
             now_playing = f"Now Playing: {song_name_without_extension}"
@@ -107,13 +105,13 @@ class MusicPlayer:
     def stop_music(self):
         with self.lock:
             self.is_playing = False
-            pygame.mixer.music.stop()
+            PygameManager.stop()
             if hasattr(self, 'thread') and self.thread is not None:
                 self.thread.join()
 
     def set_volume(self, volume: int):
         if 0 <= volume <= 100:
-            pygame.mixer.music.set_volume(volume / 100.0)
+            PygameManager.set_volume(volume)
         else:
             raise ValueError("Volume must be between 0 and 100")
 
