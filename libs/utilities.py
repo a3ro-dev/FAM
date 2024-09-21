@@ -15,6 +15,7 @@ from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 import smtplib
 import pyttsx3
+import pygame
 
 # Load configuration
 with open('conf/config.yaml') as file:
@@ -57,8 +58,12 @@ class Utilities:
     def speak(self, text: str):
         try:
             engine = pyttsx3.init()
-            engine.say(text)
+            engine.save_to_file(text, 'tts.mp3')
             engine.runAndWait()
+            pygame.mixer.music.load('tts.mp3')
+            pygame.mixer.music.play()
+            while pygame.mixer.music.get_busy():
+                time.sleep(0.1)
             print(text)
         except Exception as e:
             print(f"Error in speak: {e}")
@@ -73,10 +78,11 @@ class Utilities:
             text = r.recognize(audio)  # Use recognize_google for speech recognition
             print(f"Recognized speech: {text}")
             self.playChime('success')
-            return str(text)
+            return text
         except Exception as e:
             self.playChime('error')
             print(f"Error in getSpeech: {e}")
+        return ""
     
     def getTime(self):
         return time.ctime()
