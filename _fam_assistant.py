@@ -79,18 +79,27 @@ class FamAssistant:
         self.util.speak("Keyword detected. Listening for your command...")
         if self.music_player.is_playing:
             self.music_player.set_volume(20)
+        
+        # Close the audio stream before calling getSpeech
+        self.close_audio_stream()
+        
         try:
             command = self.util.getSpeech()
         except Exception as e:
             print(f"Error in speech recognition {e}")
             return
+        
         print(f"Recognized command: {command}")
         if self.music_player.is_playing and command != "stop music" and not any(keyword in command for keyword in ["song", "music"]):
             self.util.speak("Please stop the music player first by saying 'stop music'.")
         else:
             self.process_command(command)
+        
         if self.music_player.is_playing:
             self.music_player.set_volume(100)
+        
+        # Reinitialize the audio stream after processing the command
+        self.init_audio_stream()
 
     def process_command(self, command):
         print(f"Processing command: {command}")
@@ -170,10 +179,18 @@ class FamAssistant:
             reply = str(self.gpt.live_chat_with_ai(str(command)))
             self.util.speak(reply)
 
+    def close_audio_stream(self):
+        if self.audio_stream is not None:
+            self.audio_stream.stop_stream()
+            self.audio_stream.close()
+            self.audio_stream = None
+            print("Audio stream closed.")
+
     def stop(self):
         self.is_running = False
-        if self.audio_stream is not None:
-            self.audio_stream.close()
+        if self.thread is not None:
+            self.thread.join()
+        self.close_audio_stream()
         if self.porcupine is not None:
             self.porcupine.delete()
         self.music_player.stop_music()

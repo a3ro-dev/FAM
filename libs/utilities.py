@@ -54,20 +54,19 @@ class Utilities:
                 raise ValueError(f"Unknown chime type: {type}")
         except Exception as e:
             print(f"Error in playChime: {e}")
-    
+
     def speak(self, text: str):
         try:
-            engine = pyttsx3.init()
-            engine.save_to_file(text, 'tts.mp3')
-            engine.runAndWait()
-            pygame.mixer.music.load('tts.mp3')
+            tts = gTTS(text=text, lang='en')
+            tts.save("tts.mp3")
+            pygame.mixer.music.load("tts.mp3")
             pygame.mixer.music.play()
             while pygame.mixer.music.get_busy():
                 time.sleep(0.1)
             print(text)
         except Exception as e:
             print(f"Error in speak: {e}")
-
+            
     def getSpeech(self):
         try:
             r = sr.Recognizer()
