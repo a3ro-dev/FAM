@@ -100,7 +100,6 @@ class FamAssistant:
         
         # Reinitialize the audio stream after processing the command
         self.init_audio_stream()
-
     def process_command(self, command):
         print(f"Processing command: {command}")
         command_words = command.lower().split()
@@ -152,7 +151,7 @@ class FamAssistant:
                 self.util.speak("Quitting the program")
                 self.stop()
                 sys.exit(0)
-            elif "play" in command: 
+            elif "play" in command and command not in commands:  # Handle "play (music name)" command
                 song_name = command.replace("play", "").strip()
                 if song_name:
                     subprocess.run(["/home/pi/FAM/env/bin/python3", "/home/pi/FAM/libs/music_search.py", song_name])
