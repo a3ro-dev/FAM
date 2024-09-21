@@ -15,4 +15,5 @@ groq
 playsound
 adafruit-circuitpython-neopixel
 Adafruit-Blinka
+wikipedia-api
 numpy

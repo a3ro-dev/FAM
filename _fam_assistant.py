@@ -81,89 +81,81 @@ class FamAssistant:
 
     def process_command(self, command):
         print(f"Processing command: {command}")
-        if any(greet in command for greet in ["how are you", "hi", "hello", "wassup", "what's up", "hey", "sup"]):
-            for _ in range(10):
-                reply = str(self.gpt.live_chat_with_ai(str(command)))
+        command_words = command.lower().split()
+        first_few_words = " ".join(command_words[:4])
+
+        if any(cmd in first_few_words for cmd in commands):
+            if any(greet in command for greet in ["hi", "hello", "wassup", "what's up", "hey", "sup"]):
+                self.util.speak("Hello! How can I help you today?")
+            elif "how are you" in command:
+                self.util.speak("I'm doing great! How can I help you today?")
+            elif any(time in command for time in ["time", "what time is it", "current time"]):
+                self.util.speak(self.util.getTime())
+            elif any(date in command for date in ["date", "what's the date", "current date"]):
+                self.util.speak(self.util.getDate())
+            elif any(vision in command for vision in ["vision", "eyes", "look", "see", "camera"]):
+                self.util.captureImage()
+                reply = str(self.gpt.generate_text_with_image(f"{command}", r"F:\ai-assistant\pico-files\assets\image.jpg"))
+                self.util.playChime('load')
                 self.util.speak(reply)
-                command = self.util.getSpeech()
-                if command and any(bye in command for bye in ["bye", "goodbye", "stop"]):
-                    self.util.speak("Goodbye! Have a nice day.")
-                    break
-        elif any(time in command for time in ["time", "what time is it", "current time"]):
-            self.util.speak(self.util.getTime())
-        elif any(date in command for date in ["date", "what's the date", "current date"]):
-            self.util.speak(self.util.getDate())
-        elif "vision" in command or "eyes" in command:
-            self.util.captureImage()
-            reply = str(self.gpt.generate_text_with_image(f"{command}", r"F:\ai-assistant\pico-files\assets\image.jpg"))
-            self.util.playChime('load')
-            self.util.speak(reply)
-        elif any(start in command for start in ["start", "start my day", "good morning"]):
-            self.util.startMyDay()
-        elif any(news in command for news in ["news", "daily news", "what's happening", "what's the news"]):
-            self.util.speak("Here are the top news headlines...")
-            news = self.util.getNews()
-            for headline in news:
-                self.util.speak(headline)
-        elif "play music" in command:
-            self.music_player.play_music_thread()
-        elif "pause" in command:
-            self.util.speak("Pausing music...")
-            self.music_player.pause_music()
-        elif "resume" in command:
-            self.util.speak("Unpausing music...")
-            self.music_player.unpause_music()
-        elif "stop" in command:
-            self.util.speak("Stopping music...")
-            self.music_player.stop_music()
-        elif any(skip in command for skip in ["next", "skip"]):
-            self.util.speak("Playing next track...")
-            self.music_player.play_next()
-        elif "seek forward" in command:
-            try:
-                seconds = 10
-                self.util.speak(f"Seeking forward by {seconds} seconds")
-                self.music_player.seek_forward(seconds)
-            except ValueError:
-                self.util.speak("Invalid time. Please provide the number of seconds to seek forward.")
-        elif "shut down" in command or "shutdown" in command:
-            self.util.speak("Quitting the program")
-            self.stop()
-            sys.exit(0)
-        elif "play" in command: 
-            song_name = command.replace("play", "").strip()
-            if song_name:
-                subprocess.run(["python", r"pico-files\libs\music_search.py", song_name])
-                self.util.speak(f"{song_name} will be played shortly...")
+            elif any(start in command for start in ["start", "start my day", "good morning"]):
+                self.util.startMyDay()
+            elif any(news in command for news in ["news", "daily news", "what's happening", "what's the news"]):
+                self.util.speak("Here are the top news headlines...")
+                news = self.util.getNews()
+                for headline in news:
+                    self.util.speak(headline)
+            elif "play music" in command:
                 self.music_player.play_music_thread()
-        elif any(task in command for task in ["add task", "add a task", "add a new task"]):
-            task = self.util.speak("Please provide the task!")
-            if task:
-                self.util.speak(f"Adding task: {task}")
-                self.task_manager.add_task_at_start(task)
-        elif any(search in command for search in ["search task", "search for task"]):
-            task = self.util.speak("Please provide the task to search for!")
-            if task:
-                self.util.speak(f"Searching for task: {task}")
-                tasks = [task.name for task in self.task_manager.display_tasks()]
-                close_matches = difflib.get_close_matches(task, tasks, n=1, cutoff=0.7)
-                if close_matches:
-                    matched_task = close_matches[0]
-                    self.task_manager.search_task(matched_task)
-                else:
-                    self.util.speak("No matching task found.")
+            elif "pause" in command:
+                self.util.speak("Pausing music...")
+                self.music_player.pause_music()
+            elif "resume" in command:
+                self.util.speak("Unpausing music...")
+                self.music_player.unpause_music()
+            elif "stop" in command:
+                self.util.speak("Stopping music...")
+                self.music_player.stop_music()
+            elif any(skip in command for skip in ["next", "skip"]):
+                self.util.speak("Playing next track...")
+                self.music_player.play_next()
+            elif "seek forward" in command:
+                try:
+                    seconds = 10
+                    self.util.speak(f"Seeking forward by {seconds} seconds")
+                    self.music_player.seek_forward(seconds)
+                except ValueError:
+                    self.util.speak("Invalid time. Please provide the number of seconds to seek forward.")
+            elif "shut down" in command or "shutdown" in command:
+                self.util.speak("Quitting the program")
+                self.stop()
+                sys.exit(0)
+            elif "play" in command: 
+                song_name = command.replace("play", "").strip()
+                if song_name:
+                    subprocess.run(["", "/home/pi/FAM/libs/music_search.py", song_name])
+                    self.util.speak(f"{song_name} will be played shortly...")
+                    self.music_player.play_music_thread()
+            elif any(task in command for task in ["add task", "add a task", "add a new task"]):
+                task = self.util.speak("Please provide the task!")
+                if task:
+                    self.util.speak(f"Adding task: {task}")
+                    self.task_manager.add_task_at_start(task)
+            elif any(search in command for search in ["search task", "search for task"]):
+                task = self.util.speak("Please provide the task to search for!")
+                if task:
+                    self.util.speak(f"Searching for task: {task}")
+                    tasks = [task.name for task in self.task_manager.display_tasks()]
+                    close_matches = difflib.get_close_matches(task, tasks, n=1, cutoff=0.7)
+                    if close_matches:
+                        matched_task = close_matches[0]
+                        self.task_manager.search_task(matched_task)
+                    else:
+                        self.util.speak("No matching task found.")
         else:
-            close_matches = difflib.get_close_matches(command, commands, n=1)
-            if close_matches:
-                closest_match = close_matches[0]
-                self.util.speak(f"Did you mean '{closest_match}'? Please say yes or no.")
-                response = self.util.getSpeech()
-                if response == "yes":
-                    self.process_command(closest_match)
-                else:
-                    self.util.speak("I'm sorry, I didn't understand that command.")
-            else:
-                self.util.speak("I'm sorry, I didn't understand that command.")
+            # Fallback to GPT-based response for unrecognized commands
+            reply = str(self.gpt.live_chat_with_ai(str(command)))
+            self.util.speak(reply)
 
     def stop(self):
         self.is_running = False
