@@ -1,4 +1,3 @@
-vosk
 PyAudio
 opencv-python
 pvporcupine

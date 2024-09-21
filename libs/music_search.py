@@ -8,9 +8,13 @@ from youtube_search import YoutubeSearch
 from fuzzywuzzy import fuzz
 import yaml
 
+# Load configuration
+with open('conf/config.yaml') as file:
+    config = yaml.safe_load(file)
+
+
 # Constants for configuration keys and file extensions
 CONFIG_PATH = 'conf/config.yaml'
-MUSIC_PATH_KEY = 'main.music_path'
 MUSIC_EXTENSIONS = ('.mp3',)
 
 # Configure logging
@@ -24,7 +28,7 @@ def load_config(path: str) -> dict:
 class MusicSearch:
     def __init__(self):
         config = load_config(CONFIG_PATH)
-        self.output_path = config[MUSIC_PATH_KEY]
+        self.output_path = config['main']['music_path']
         self.executor = concurrent.futures.ThreadPoolExecutor()
 
     def shutdown(self):
