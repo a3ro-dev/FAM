@@ -101,10 +101,9 @@ class FamAssistant:
 
     def process_command(self, command):
         print(f"Processing command: {command}")
-        command_words = command.lower().split()
-        first_few_words = " ".join(command_words[:2])
-
-        if any(cmd in first_few_words for cmd in commands):
+        command_words = set(command.lower().split())
+    
+        if command_words & commands:
             self.handle_known_commands(command)
         else:
             self.handle_unknown_command(command)
@@ -209,5 +208,5 @@ commands = {
     "search task", "search for task", "how are you", "hi", "hello", "wassup", "what's up", "hey", "sup", "time", 
     "what time is it", "current time", "date", "what's the date", "current date", "vision", "eyes", "start", 
     "start my day", "good morning", "news", "daily news", "what's happening", "what's the news", "play", 
-    "play music", "pause", "resume", "stop", "next", "skip", "add task", "seek forward", "shut down"
+    "play music", "pause", "resume", "stop", "next", "skip", "add task", "seek forward", "shut down", "music"
 }
