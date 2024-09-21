@@ -1,6 +1,6 @@
 import libs.gpt as gpt
 import random
-from playsound import playsound
+import subprocess
 import time
 import cv2
 from gtts import gTTS
@@ -47,17 +47,20 @@ class Utilities:
     def playChime(self, type: str):
         try:
             if type in self.audio_files:
-                playsound(self.audio_files[type])
+                subprocess.run(["aplay", self.audio_files[type]], check=True)
             else:
                 raise ValueError(f"Unknown chime type: {type}")
         except Exception as e:
             print(f"Error in playChime: {e}")
 
     def speak(self, text: str):
-        tts = gTTS(text=text, lang='en', slow=False)
-        tts.save("/home/pi/FAM/assets/cache/tts.mp3")
-        playsound("/home/pi/FAM/assets/cache/tts.mp3")
-        print(text)
+        try:
+            tts = gTTS(text=text, lang='en', slow=False)
+            tts.save("/home/pi/FAM/assets/cache/tts.mp3")
+            subprocess.run(["mpg123", "/home/pi/FAM/assets/cache/tts.mp3"], check=True)
+            print(text)
+        except Exception as e:
+            print(f"Error in speak: {e}")
 
     def getSpeech(self):
         try:
