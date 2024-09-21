@@ -105,14 +105,14 @@ class FamAssistant:
         command_words = command.lower().split()
         first_few_words = " ".join(command_words[:6])
     
-        # Check for "play (music name)" command first
-        if command.lower().startswith("play "):
-            song_name = command[5:].strip()  # Extract the song name after "play"
-            if song_name:
-                subprocess.run(["/home/pi/FAM/env/bin/python3", "/home/pi/FAM/libs/music_search.py", song_name])
-                self.util.speak(f"{song_name} will be played shortly...")
-                self.music_player.play_music_thread()
-            return
+        # # Check for "play (music name)" command first
+        # if command.lower().startswith("play "):
+        #     song_name = command[5:].strip()  # Extract the song name after "play"
+        #     if song_name:
+        #         subprocess.run(["/home/pi/FAM/env/bin/python3", "/home/pi/FAM/libs/music_search.py", song_name])
+        #         self.util.speak(f"{song_name} will be played shortly...")
+        #         self.music_player.play_music_thread()
+        #     return
     
         # Check for other commands
         if any(cmd in first_few_words for cmd in commands):
