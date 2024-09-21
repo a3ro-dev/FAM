@@ -28,7 +28,9 @@ import os
 import random
 import threading
 import time
-from pygame_manager import PygameManager
+import libs.pygame_manager
+import pygame
+PygameManager = libs.pygame_manager.PygameManager()
 import libs.utilities as utilities
 
 # Constants for file extensions
