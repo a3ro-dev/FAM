@@ -4,7 +4,6 @@ import threading
 import time
 import pygame
 import libs.utilities as utilities
-import libs.rgb as rgb
 
 # Constants for file extensions
 MUSIC_EXTENSIONS = ('.mp3', '.wav')
@@ -46,7 +45,6 @@ class MusicPlayer:
         self.is_paused = False
         self.lock = threading.Lock()
         self.utils = utilities.Utilities()
-        self.rgb_control = rgb.Led24BitEffects()
 
     def load_playlist(self) -> list:
         if not os.path.isdir(self.music_directory):
@@ -68,7 +66,6 @@ class MusicPlayer:
 
         while self.is_playing:
             if not pygame.mixer.music.get_busy() and not self.is_paused:
-                self.rgb_control.stop_effect()
                 self.play_next()
             time.sleep(1)
 
@@ -81,7 +78,6 @@ class MusicPlayer:
             song_name_without_extension = os.path.splitext(song_name)[0]
             now_playing = f"Now Playing: {song_name_without_extension}"
             self.utils.speak(now_playing)
-            self.rgb_control.start_progress_effect(song_duration=int(pygame.mixer.Sound(current_song).get_length()))
         except pygame.error as e:
             print(f"Error playing music: {e}")
             self.is_playing = False
@@ -114,7 +110,6 @@ class MusicPlayer:
             pygame.mixer.music.stop()
             if hasattr(self, 'thread') and self.thread is not None:
                 self.thread.join()
-            self.rgb_control.stop_effect()
 
     def set_volume(self, volume: int):
         if 0 <= volume <= 100:

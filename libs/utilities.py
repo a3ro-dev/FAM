@@ -7,7 +7,6 @@ from gtts import gTTS
 import speech_recognition as sr
 from functools import lru_cache
 import pyaudio
-import libs.rgb as rgb
 import threading
 import yaml
 import requests
@@ -31,7 +30,6 @@ newsAPI = config['utilities']['news_api_key']
 weatherAPI = config['utilities']['weather_api_key']
 
 Gpt = gpt.Generation()
-RGBtop = rgb.Led24BitEffects()
 
 class Utilities:
     """
@@ -49,21 +47,11 @@ class Utilities:
     def playChime(self, type: str):
         try:
             if type in self.audio_files:
-                self._set_led_effect(type)
                 playsound(self.audio_files[type])
             else:
                 raise ValueError(f"Unknown chime type: {type}")
         except Exception as e:
             print(f"Error in playChime: {e}")
-            RGBtop.rotatory_fill(color=(255, 0, 0))
-
-    def _set_led_effect(self, type: str):
-        if type == "load":
-            RGBtop.rotatory_fill(color=(0, 0, 255))
-        elif type == "success":
-            RGBtop.rotatory_fill(color=(0, 255, 0))
-        elif type == "error":
-            RGBtop.rotatory_fill(color=(255, 0, 0))
 
     def speak(self, text: str):
         tts = gTTS(text=text, lang='en', slow=False)
@@ -73,34 +61,20 @@ class Utilities:
 
     def getSpeech(self):
         try:
-            from libs.rgb import Led24BitEffects
-            pa = pyaudio.PyAudio()
-            stream = pa.open(format=pyaudio.paInt16, channels=1, rate=44100, input=True, frames_per_buffer=1024)
             r = sr.Recognizer()
-            
-            led_effects = Led24BitEffects()
-            
             with sr.Microphone() as source:
                 print("Listening for speech...")
                 r.adjust_for_ambient_noise(source, duration=1)
-                
-                ambient_thread = threading.Thread(target=led_effects.start_visualizer_effect, args=(stream,))
-                ambient_thread.start()
-                
                 audio = r.listen(source)
             
-            text = r.recognize(audio)
+            text = r.recognize(audio)  # Use recognize_google for speech recognition
             print(f"Recognized speech: {text}")
             self.playChime('success')
         except Exception as e:
             self.playChime('error')
             print(f"Error in getSpeech: {e}")
-        finally:
-            led_effects.stop_ambient_effect()
-            if ambient_thread.is_alive():
-                ambient_thread.join()
+        
         return str(text)
-
     def getTime(self):
         return time.ctime()
 
