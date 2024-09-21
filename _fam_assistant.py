@@ -133,7 +133,7 @@ class FamAssistant:
             elif "play" in command: 
                 song_name = command.replace("play", "").strip()
                 if song_name:
-                    subprocess.run(["", "/home/pi/FAM/libs/music_search.py", song_name])
+                    subprocess.run(["/home/pi/FAM/env/bin/python3", "/home/pi/FAM/libs/music_search.py", song_name])
                     self.util.speak(f"{song_name} will be played shortly...")
                     self.music_player.play_music_thread()
             elif any(task in command for task in ["add task", "add a task", "add a new task"]):
