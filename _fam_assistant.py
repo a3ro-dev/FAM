@@ -35,32 +35,38 @@ class FamAssistant:
             self.porcupine = None 
             
     def init_audio_stream(self):
-        pa = pyaudio.PyAudio()
-        if self.porcupine is not None:
-            self.audio_stream = pa.open(
-                rate=44100,
-                channels=1,
-                format=pyaudio.paInt16,
-                input=True,
-                frames_per_buffer=self.porcupine.frame_length
-            )
-
+        try:
+            pa = pyaudio.PyAudio()
+            if self.porcupine is not None:
+                self.audio_stream = pa.open(
+                    rate=44100,
+                    channels=1,
+                    format=pyaudio.paInt16,
+                    input=True,
+                    frames_per_buffer=self.porcupine.frame_length
+                )
+        except Exception as e:
+            print(e)
     def start(self):
-        self.init_porcupine()
-        self.init_audio_stream()
-        self.is_running = True
-        print("Listening for keyword...")
-    
-        while self.is_running:
-            if self.porcupine is not None and self.audio_stream is not None:
-                pcm = self.audio_stream.read(self.porcupine.frame_length, exception_on_overflow=False)
-                pcm = struct.unpack_from("h" * self.porcupine.frame_length, pcm)
-    
-                keyword_index = self.porcupine.process(pcm)
-                if keyword_index >= 0:
-                    self.on_keyword_detected()
-                    print("Listening for keyword...")
-
+        try:
+            self.init_porcupine()
+            self.init_audio_stream()
+            self.is_running = True
+            print("Listening for keyword...")
+        
+            while self.is_running:
+                if self.porcupine is not None and self.audio_stream is not None:
+                    pcm = self.audio_stream.read(self.porcupine.frame_length, exception_on_overflow=False)
+                    pcm = struct.unpack_from("h" * self.porcupine.frame_length, pcm)
+        
+                    keyword_index = self.porcupine.process(pcm)
+                    if keyword_index >= 0:
+                        self.on_keyword_detected()
+                        print("Listening for keyword...")
+        except Exception as e:
+            print(f"Error in start: {e}")
+            self.stop()
+            
     def on_keyword_detected(self):
         print("Keyword detected!")
         self.util.speak("Keyword detected. Listening for your command...")
