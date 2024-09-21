@@ -66,7 +66,6 @@ class Utilities:
                 print("Listening for speech...")
                 r.adjust_for_ambient_noise(source, duration=1)
                 audio = r.listen(source)
-            
             text = r.recognize(audio)  # Use recognize_google for speech recognition
             print(f"Recognized speech: {text}")
             self.playChime('success')

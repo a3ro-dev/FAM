@@ -33,12 +33,12 @@ class FamAssistant:
         except Exception as e:
             print(f"Failed to initialize Porcupine: {e}")
             self.porcupine = None 
-
+            
     def init_audio_stream(self):
         pa = pyaudio.PyAudio()
         if self.porcupine is not None:
             self.audio_stream = pa.open(
-                rate=self.porcupine.sample_rate,
+                rate=44100,
                 channels=1,
                 format=pyaudio.paInt16,
                 input=True,
