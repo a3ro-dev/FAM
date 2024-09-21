@@ -37,7 +37,7 @@ class MusicPlayer:
     """
 
     def __init__(self, music_directory: str, shuffle: bool = False):
-        pygame.mixer.init()
+        pygame.mixer.init(buffer=1024)  # Default is 3072, reduce it or increase it depending on performance
         self.music_directory = music_directory
         self.shuffle = shuffle
         self.playlist = self.load_playlist()
