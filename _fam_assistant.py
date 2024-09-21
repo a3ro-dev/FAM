@@ -11,7 +11,7 @@ import libs.music as musicP
 import libs.music_search as musicSearch
 import libs.clock as clock
 
-commands = {"search task", "search for task", "how are you", "hi", "hello", "wassup", "what's up", "hey", "sup", "time", "what time is it", "current time", "date", "what's the date", "current date", "vision", "eyes", "start", "start my day", "good morning", "news", "daily news", "what's happening", "what's the news", "play music", "pause", "resume", "stop", "next", "skip", "add task", "seek forward", "shut down"}
+commands = {"search task", "search for task", "how are you", "hi", "hello", "wassup", "what's up", "hey", "sup", "time", "what time is it", "current time", "date", "what's the date", "current date", "vision", "eyes", "start", "start my day", "good morning", "news", "daily news", "what's happening", "what's the news", "play" "play music", "pause", "resume", "stop", "next", "skip", "add task", "seek forward", "shut down"}
 
 class FamAssistant:
     def __init__(self, access_key, keyword_path, music_path):
