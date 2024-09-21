@@ -10,6 +10,7 @@ import pyaudio
 import threading
 import yaml
 import requests
+import shutil
 from datetime import datetime
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
@@ -66,8 +67,11 @@ class Utilities:
             print(text)
         except Exception as e:
             print(f"Error in speak: {e}")
-            
+
     def getSpeech(self):
+        if not shutil.which("flac"):
+            print("FLAC conversion utility not available. Please install FLAC.")
+            return ""
         try:
             r = sr.Recognizer()
             with sr.Microphone() as source:
