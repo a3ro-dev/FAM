@@ -115,7 +115,7 @@ class Generation:
                 }
             ],
             temperature=1,
-            max_tokens=8192,
+            max_tokens=409,
             top_p=1,
             stream=False,
             stop=None,

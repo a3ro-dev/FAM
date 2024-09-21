@@ -104,7 +104,7 @@ class FamAssistant:
     def process_command(self, command):
         print(f"Processing command: {command}")
         command_words = command.lower().split()
-        first_few_words = " ".join(command_words[:4])
+        first_few_words = " ".join(command_words[:6])
 
         if any(cmd in first_few_words for cmd in commands):
             if any(greet in command for greet in ["hi", "hello", "wassup", "what's up", "hey", "sup"]):
