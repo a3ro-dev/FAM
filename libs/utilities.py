@@ -48,7 +48,7 @@ class Utilities:
     def playChime(self, type: str):
         try:
             if type in self.audio_files:
-                subprocess.run(["aplay", self.audio_files[type]], check=True)
+                print(type)
             else:
                 raise ValueError(f"Unknown chime type: {type}")
         except Exception as e:
@@ -73,10 +73,10 @@ class Utilities:
             text = r.recognize(audio)  # Use recognize_google for speech recognition
             print(f"Recognized speech: {text}")
             self.playChime('success')
+            return str(text)
         except Exception as e:
             self.playChime('error')
             print(f"Error in getSpeech: {e}")
-        return str(text)
     
     def getTime(self):
         return time.ctime()
