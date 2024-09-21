@@ -14,3 +14,4 @@ groq
 playsound
 wikipedia-api
 numpy
+pyttsx3

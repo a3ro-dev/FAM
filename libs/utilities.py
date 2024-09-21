@@ -14,6 +14,7 @@ from datetime import datetime
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 import smtplib
+import pyttsx3
 
 # Load configuration
 with open('conf/config.yaml') as file:
@@ -52,12 +53,12 @@ class Utilities:
                 raise ValueError(f"Unknown chime type: {type}")
         except Exception as e:
             print(f"Error in playChime: {e}")
-
+    
     def speak(self, text: str):
         try:
-            tts = gTTS(text=text, lang='en', slow=False)
-            tts.save("/home/pi/FAM/assets/cache/tts.mp3")
-            subprocess.run(["mpg123", "/home/pi/FAM/assets/cache/tts.mp3"], check=True)
+            engine = pyttsx3.init()
+            engine.say(text)
+            engine.runAndWait()
             print(text)
         except Exception as e:
             print(f"Error in speak: {e}")
@@ -75,8 +76,8 @@ class Utilities:
         except Exception as e:
             self.playChime('error')
             print(f"Error in getSpeech: {e}")
-        
         return str(text)
+    
     def getTime(self):
         return time.ctime()
 
