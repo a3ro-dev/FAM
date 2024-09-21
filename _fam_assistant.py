@@ -55,20 +55,24 @@ class FamAssistant:
             self.init_porcupine()
             self.init_audio_stream()
             self.is_running = True
+            self.thread = threading.Thread(target=self.run)
+            self.thread.start()
             print("Listening for keyword...")
-        
+        except Exception as e:
+            print(f"Error in start: {e}")
+
+    def run(self):
+        try:
             while self.is_running:
                 if self.porcupine is not None and self.audio_stream is not None:
                     pcm = self.audio_stream.read(self.porcupine.frame_length, exception_on_overflow=False)
                     pcm = struct.unpack_from("h" * self.porcupine.frame_length, pcm)
-        
                     keyword_index = self.porcupine.process(pcm)
                     if keyword_index >= 0:
                         self.on_keyword_detected()
                         print("Listening for keyword...")
         except Exception as e:
-            print(f"Error in start: {e}")
-            self.stop()
+            print(f"Error in run: {e}")
 
     def on_keyword_detected(self):
         print("Keyword detected!")
