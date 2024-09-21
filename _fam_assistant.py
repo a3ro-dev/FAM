@@ -39,7 +39,7 @@ class FamAssistant:
             pa = pyaudio.PyAudio()
             if self.porcupine is not None:
                 self.audio_stream = pa.open(
-                    rate=44100,
+                    rate=16000,
                     channels=1,
                     format=pyaudio.paInt16,
                     input=True,
@@ -66,7 +66,7 @@ class FamAssistant:
         except Exception as e:
             print(f"Error in start: {e}")
             self.stop()
-            
+
     def on_keyword_detected(self):
         print("Keyword detected!")
         self.util.speak("Keyword detected. Listening for your command...")
