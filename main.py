@@ -8,7 +8,7 @@ def load_config():
 def main():
     config = load_config()
     access_key = config['main']['access_key']
-    keyword_path = "/home/pi/FAM/model/wake-mode/Hey-Fam_en_raspberry-pi_v3_0_0.ppn"
+    keyword_path = "/home/pi/FAM/model/Hey-Fam_en_raspberry-pi_v3_0_0.ppn"
     music_path = config['main']['music_path']
 
     porcupine_listener = FamAssistant(access_key=access_key, keyword_path=keyword_path, music_path=music_path)
