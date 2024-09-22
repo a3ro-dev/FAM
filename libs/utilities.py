@@ -13,7 +13,7 @@ from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 import smtplib
 import subprocess
-from pydub import AudioSegment
+from pydub import AudioSegment #type: ignore
 
 # Load configuration
 with open('conf/config.yaml') as file:
