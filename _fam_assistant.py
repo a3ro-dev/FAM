@@ -82,8 +82,7 @@ class FamAssistant:
                 if self.porcupine and self.audio_stream:
                     pcm = self.audio_stream.read(self.porcupine.frame_length, exception_on_overflow=False)
                     pcm = struct.unpack_from("h" * self.porcupine.frame_length, pcm)
-                    pcm = np.array(pcm, dtype=np.float32)
-                    keyword_index = self.porcupine.process(pcm) #type: ignore
+                    keyword_index = self.porcupine.process(pcm)
                     if keyword_index >= 0:
                         self.on_keyword_detected()
                         print("Listening for keyword...")
