@@ -11,8 +11,7 @@ fuzzywuzzy
 pyyaml
 gTTS
 groq
-audioplayer
 wikipedia-api
 numpy
 pyttsx3
-gi
+pydub

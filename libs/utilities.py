@@ -13,6 +13,7 @@ from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 import smtplib
 import subprocess
+from pydub import AudioSegment
 
 # Load configuration
 with open('conf/config.yaml') as file:
@@ -53,9 +54,16 @@ class Utilities:
             tts = gTTS(text=text, lang='en')
             tts.save("/home/pi/FAM/assets/cache/tts.mp3")
             print(text)
-            subprocess.run(['ffplay', '-nodisp', '-autoexit', "/home/pi/FAM/assets/cache/tts.mp3"], check=True)
+            
+            # Convert mono to stereo
+            sound = AudioSegment.from_mp3("/home/pi/FAM/assets/cache/tts.mp3")
+            stereo_sound = sound.set_channels(2)
+            stereo_sound.export("/home/pi/FAM/assets/cache/tts_stereo.mp3", format="mp3")
+            
+            subprocess.run(['ffplay', '-nodisp', '-autoexit', "/home/pi/FAM/assets/cache/tts_stereo.mp3"], check=True)
         except Exception as e:
             print(f"Error in speak: {e}")
+            
     def getSpeech(self):
         if not shutil.which("flac"):
             print("FLAC conversion utility not available. Please install FLAC.")
