@@ -16,3 +16,4 @@ numpy
 pyttsx3
 noisereduce
 pydub
+elevenlabs
