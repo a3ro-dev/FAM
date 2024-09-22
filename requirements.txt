@@ -15,3 +15,4 @@ audioplayer
 wikipedia-api
 numpy
 pyttsx3
+gi

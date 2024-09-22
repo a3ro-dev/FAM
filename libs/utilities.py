@@ -12,7 +12,8 @@ from datetime import datetime
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 import smtplib
-from audioplayer import AudioPlayer
+import subprocess
+
 # Load configuration
 with open('conf/config.yaml') as file:
     config = yaml.safe_load(file)
@@ -41,7 +42,7 @@ class Utilities:
     def playChime(self, type: str):
         try:
             if type in self.audio_files:
-                AudioPlayer(self.audio_files[type])
+                subprocess.run(['ffplay', '-nodisp', '-autoexit', self.audio_files[type]], check=True)
             else:
                 raise ValueError(f"Unknown chime type: {type}")
         except Exception as e:
@@ -52,10 +53,9 @@ class Utilities:
             tts = gTTS(text=text, lang='en')
             tts.save("/home/pi/FAM/assets/cache/tts.mp3")
             print(text)
-            AudioPlayer("/home/pi/FAM/assets/cache/tts.mp3")
+            subprocess.run(['ffplay', '-nodisp', '-autoexit', "/home/pi/FAM/assets/cache/tts.mp3"], check=True)
         except Exception as e:
             print(f"Error in speak: {e}")
-
     def getSpeech(self):
         if not shutil.which("flac"):
             print("FLAC conversion utility not available. Please install FLAC.")
