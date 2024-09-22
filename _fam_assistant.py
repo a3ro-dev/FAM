@@ -95,7 +95,7 @@ class FamAssistant:
 
     def on_keyword_detected(self):
         print("Keyword detected!")
-        self.util.speak("Keyword detected. Listening for your command...")
+        self.util.playChime('success')
         if self.music_player.is_playing:
             self.music_player.set_volume(20)
 

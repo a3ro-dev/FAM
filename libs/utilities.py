@@ -2,7 +2,6 @@ import libs.gpt as gpt
 import random
 import time
 import cv2
-from gtts import gTTS
 import speech_recognition as sr
 from functools import lru_cache
 import yaml
@@ -12,8 +11,12 @@ from datetime import datetime
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 import smtplib
+from elevenlabs import VoiceSettings
+from elevenlabs.client import ElevenLabs
 import subprocess
 from pydub import AudioSegment #type: ignore
+import uuid
+import os
 
 # Load configuration
 with open('conf/config.yaml') as file:
@@ -27,9 +30,11 @@ success = config['utilities']['audio_files']['success']
 error = config['utilities']['audio_files']['error']
 load = config['utilities']['audio_files']['load']
 newsAPI = config['utilities']['news_api_key']
-weatherAPI = config['utilities']['weather_api_key']
+weatherAPI = config['utilities']['weather_api_key'] 
 
 Gpt = gpt.Generation()
+ELEVENLABS_API_KEY = config['main']['eleven_labs_api_key']
+client = ElevenLabs(api_key=ELEVENLABS_API_KEY)
 
 class Utilities:
     def __init__(self):
@@ -48,19 +53,36 @@ class Utilities:
                 raise ValueError(f"Unknown chime type: {type}")
         except Exception as e:
             print(f"Error in playChime: {e}")
-
+    
     def speak(self, text: str):
         try:
-            tts = gTTS(text=text, lang='en')
-            tts.save("/home/pi/FAM/assets/cache/tts.mp3")
-            print(text)
-            
-            # Convert mono to stereo
-            sound = AudioSegment.from_mp3("/home/pi/FAM/assets/cache/tts.mp3")
-            stereo_sound = sound.set_channels(2)
-            stereo_sound.export("/home/pi/FAM/assets/cache/tts_stereo.mp3", format="mp3")
-            
-            subprocess.run(['ffplay', '-nodisp', '-autoexit', "/home/pi/FAM/assets/cache/tts_stereo.mp3"], check=True)
+            # Calling the text_to_speech conversion API with detailed parameters
+            response = client.text_to_speech.convert(
+                voice_id="EXAVITQu4vr4xnSDxMaL",  # Sarah pre-made voice
+                output_format="mp3_22050_32",
+                text=text,
+                model_id="eleven_multilingual_v2",  # use the multilingual model
+                voice_settings=VoiceSettings(
+                    stability=0.5,
+                    similarity_boost=0.8,
+                    style=0.0,
+                    use_speaker_boost=True,
+                ),
+            )
+    
+            # Generating a unique file name for the output MP3 file
+            save_file_path = f"/home/pi/FAM/assets/cache/{uuid.uuid4()}.mp3"
+    
+            # Writing the audio to a file
+            with open(save_file_path, "wb") as f:
+                for chunk in response:
+                    if chunk:
+                        f.write(chunk)
+    
+            print(f"{save_file_path}: A new audio file was saved successfully!")
+    
+            # Play the saved audio file
+            subprocess.run(['ffplay', '-nodisp', '-autoexit', save_file_path], check=True)
         except Exception as e:
             print(f"Error in speak: {e}")
             

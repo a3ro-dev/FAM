@@ -4,6 +4,7 @@ main:
     groq_api_key: "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"
     openai_api_key: "sk-proj-K8hfsSF9vbG1ccu7Mo50T3BlbkFJXB6nXSORFrhYVjkzTWaR"
     model_name: "llama3-70b-8192"
+    eleven_labs_api_key: "sk_d75e31d1462f955bca620c90ebf6de3d1dfe8ad2921c88ce"
 utilities:
     author: "AKSHAT SINGH KUSHWAHA"
     audio_files:
