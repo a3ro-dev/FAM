@@ -61,7 +61,7 @@ class Utilities:
                 voice_id="EXAVITQu4vr4xnSDxMaL",  # Sarah pre-made voice
                 output_format="mp3_22050_32",
                 text=text,
-                model_id="eleven_multilingual_v2",  # use the multilingual model
+                model_id="eleven_english_v1",  # not using the multilingual model
                 voice_settings=VoiceSettings(
                     stability=0.5,
                     similarity_boost=0.8,
