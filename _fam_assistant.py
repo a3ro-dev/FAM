@@ -12,6 +12,8 @@ import libs.clock as clock
 import subprocess
 import socket
 import libs.games
+import noisereduce as nr # type: ignore
+import numpy as np
 
 def get_ip_address():
     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -81,7 +83,10 @@ class FamAssistant:
                 if self.porcupine and self.audio_stream:
                     pcm = self.audio_stream.read(self.porcupine.frame_length, exception_on_overflow=False)
                     pcm = struct.unpack_from("h" * self.porcupine.frame_length, pcm)
-                    keyword_index = self.porcupine.process(pcm)
+                    pcm = np.array(pcm, dtype=np.float32)
+                    pcm = nr.reduce_noise(y=pcm, sr=self.porcupine.sample_rate)
+                    pcm = np.int16(pcm)
+                    keyword_index = self.porcupine.process(pcm) #type: ignore
                     if keyword_index >= 0:
                         self.on_keyword_detected()
                         print("Listening for keyword...")
