@@ -1,13 +1,10 @@
 import libs.gpt as gpt
 import random
-import subprocess
 import time
 import cv2
 from gtts import gTTS
 import speech_recognition as sr
 from functools import lru_cache
-import pyaudio
-import threading
 import yaml
 import requests
 import shutil
@@ -15,12 +12,7 @@ from datetime import datetime
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 import smtplib
-import pyttsx3
-import pygame
-import libs.pygame_manager
-
-PygameManager = libs.pygame_manager.PygameManager()
-
+from audioplayer import AudioPlayer
 # Load configuration
 with open('conf/config.yaml') as file:
     config = yaml.safe_load(file)
@@ -49,7 +41,7 @@ class Utilities:
     def playChime(self, type: str):
         try:
             if type in self.audio_files:
-                PygameManager.load_and_play(self.audio_files[type])
+                AudioPlayer(self.audio_files[type])
             else:
                 raise ValueError(f"Unknown chime type: {type}")
         except Exception as e:
@@ -58,11 +50,9 @@ class Utilities:
     def speak(self, text: str):
         try:
             tts = gTTS(text=text, lang='en')
-            tts.save("tts.mp3")
-            PygameManager.load_and_play("tts.mp3")
-            while PygameManager.is_busy():
-                time.sleep(0.1)
+            tts.save("/home/pi/FAM/assets/cache/tts.mp3")
             print(text)
+            AudioPlayer("/home/pi/FAM/assets/cache/tts.mp3")
         except Exception as e:
             print(f"Error in speak: {e}")
 
@@ -122,6 +112,8 @@ class Utilities:
                 "sunset": data["sys"]["sunset"],
                 "location": data["name"],
             }
+            # Limit the data sent to the GPT model to avoid exceeding token limit
+            print(finalData)
             return Gpt.generate_text_response(f"Given the following weather data: {finalData}, generate a concise and informative weather report.")
         except requests.exceptions.RequestException as e:
             print(f"Error in getWeather: {e}")
@@ -137,18 +129,23 @@ class Utilities:
             response = requests.get(url)
             response.raise_for_status()
             data = response.json()
+            
+            # Debugging: Print the raw API response
+            print("API Response:", data)
+            
             articles = data.get("articles", [])
             if len(articles) < num_articles:
-                raise Exception(f"Only {len(articles)} articles available, cannot select {num_articles}")
+                print(f"Only {len(articles)} articles available, cannot select {num_articles}")
+                return []
             
-            selected_articles = random.sample(articles, num_articles)
-    
+            selected_articles = random.sample(articles, min(num_articles, len(articles)))
+        
             newsList = []
             for article in selected_articles:
                 news = Gpt.generate_text_response(f"Summarize the given article in a journalistic style, focusing on the key points and events. Please avoid including any hyperlinks.\n{article}")
                 self.playChime('success')
                 newsList.append(news)
-    
+        
             return newsList
         except requests.exceptions.RequestException as e:
             self.playChime('error')
@@ -158,7 +155,7 @@ class Utilities:
             self.playChime('error')
             print(f"Error in getNews: {e}")
             return []
-
+        
     def get_part_of_day(self):
         current_hour = datetime.now().hour
     

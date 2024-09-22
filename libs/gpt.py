@@ -31,7 +31,7 @@ class Generation:
         system_message = f"Current time and date: {current_time_date}. Do as directed."
     
         completion = self.client.chat.completions.create(
-            model="llama-3.1-70b-versatile",
+            model="mixtral-8x7b-32768",
             messages=[
                 {
                     "role": "system",
@@ -157,7 +157,7 @@ class Generation:
         wiki_wiki = wikipediaapi.Wikipedia('en')
         page = wiki_wiki.page(query)
         if page.exists():
-            return page.summary[:500]  # Limit the summary to 500 characters
+            return page.summary[:200]  # Limit the summary to 500 characters
         else:
             return "Sorry, I couldn't find any information on Wikipedia for that topic."
     
@@ -171,6 +171,7 @@ class Generation:
         }
         response = requests.get(url, params=params)
         data = response.json()
+        print('Search Online..')
     
         if "AbstractText" in data and data["AbstractText"]:
             return data["AbstractText"]

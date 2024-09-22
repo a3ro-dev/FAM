@@ -2,7 +2,6 @@ import pyaudio
 import pvporcupine
 import threading
 import struct
-import subprocess
 import difflib
 import sys
 import libs.utilities as Utilities
@@ -10,6 +9,21 @@ import libs.gpt as gpt
 import libs.music as musicP
 import libs.music_search as musicSearch
 import libs.clock as clock
+import subprocess
+import socket
+import libs.games
+
+def get_ip_address():
+    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    try:
+        # doesn't even have to be reachable
+        s.connect(('10.254.254.254', 1))
+        ip_address = s.getsockname()[0]
+    except Exception:
+        ip_address = '127.0.0.1'
+    finally:
+        s.close()
+    return ip_address
 
 class FamAssistant:
     def __init__(self, access_key, keyword_path, music_path):
@@ -20,7 +34,7 @@ class FamAssistant:
         self.audio_stream = None
         self.is_running = False
         self.thread = None
-
+        self.games = libs.games.Games(False, '/home/pi/FAM/misc')    
         self.musicSearch = musicSearch.MusicSearch()
         self.music_player = musicP.MusicPlayer(music_path, shuffle=True)
         self.task_manager = clock.TaskManager()
@@ -119,7 +133,7 @@ class FamAssistant:
             self.util.speak(self.util.getDate())
         elif any(vision in command for vision in ["vision", "eyes", "look", "see", "camera"]):
             self.util.captureImage()
-            reply = str(self.gpt.generate_text_with_image(f"{command}", r"F:\ai-assistant\pico-files\assets\image.jpg"))
+            reply = str(self.gpt.generate_text_with_image(f"{command}", r"assets/image.jpg"))
             self.util.playChime('load')
             self.util.speak(reply)
         elif any(start in command for start in ["start", "start my day", "good morning"]):
@@ -129,6 +143,11 @@ class FamAssistant:
             news = self.util.getNews()
             for headline in news:
                 self.util.speak(headline)
+        elif "download" in command:
+            song_name = command[9:].strip()  # remove download and extract song name
+            if song_name:
+                subprocess.run(["/home/pi/FAM/env/bin/python3", "/home/pi/FAM/libs/music_search.py", song_name])
+                self.util.speak(f"{song_name} downloaded successfully.")
         elif "play music" in command:
             self.music_player.play_music_thread()
         elif "pause" in command:
@@ -153,6 +172,13 @@ class FamAssistant:
             self.add_task()
         elif any(search in command for search in ["search task", "search for task"]):
             self.search_task()
+        elif any(game in command for game in ["play game", "start game"]):
+            self.games.play_game()
+            ip_address = get_ip_address()
+            self.util.speak(f"Game started on http://{ip_address}:8080. Have Fun!") 
+        elif any(game in command for game in ["stop game", "end game"]):
+            self.games.stop_game()
+            self.util.speak("Game stopped. Hope you enjoyed!")
 
     def handle_unknown_command(self, command):
         reply = str(self.gpt.live_chat_with_ai(str(command)))

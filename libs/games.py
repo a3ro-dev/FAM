@@ -11,7 +11,7 @@ class Games:
 
     def play_game(self):
         try:
-            self.process = subprocess.Popen(['python', '-m', 'http.server', '8080'], cwd=self.dir, shell=True)
+            self.process = subprocess.Popen(['/home/pi/FAM/env/bin/python3', '-m', 'http.server', '8080'], cwd=self.dir, shell=True)
         except Exception as e:
             return e
 
@@ -24,7 +24,3 @@ class Games:
         else:
             raise Exception('Games not installed')
 
-games = Games(False, 'misc')
-games.play_game()
-time.sleep(60)
-games.stop_game()

@@ -11,7 +11,7 @@ fuzzywuzzy
 pyyaml
 gTTS
 groq
-playsound
+audioplayer
 wikipedia-api
 numpy
 pyttsx3

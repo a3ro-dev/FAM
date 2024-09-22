@@ -1,29 +1,3 @@
-"""
-    A class that represents a music player.
-
-    Attributes:
-        music_directory (str): The directory where the music files are located.
-        shuffle (bool): A flag indicating whether to shuffle the playlist.
-        playlist (list): A list of music files in the directory.
-        current_index (int): The index of the currently playing music in the playlist.
-        is_playing (bool): A flag indicating whether music is currently playing.
-        is_paused (bool): A flag indicating whether music is currently paused.
-        lock (threading.Lock): A lock to synchronize access to shared resources.
-        utils (utilities.Utilities): An instance of the Utilities class.
-        rgb_control (rgb.Led24BitEffects): An instance of the RGB control class.
-
-    Methods:
-        load_playlist(): Loads the playlist by scanning the music directory.
-        play_music(): Plays the music from the playlist.
-        play_music_thread(): Starts a new thread to play the music.
-        play_next(): Plays the next music in the playlist.
-        pause_music(): Pauses the currently playing music.
-        unpause_music(): Unpauses the currently paused music.
-        stop_music(): Stops the currently playing music.
-        set_volume(volume: int): Sets the volume of the music player.
-        seek_forward(seconds: int): Seeks forward in the currently playing music.
-"""
-
 import os
 import random
 import threading
@@ -57,27 +31,32 @@ class MusicPlayer:
             if not self.playlist:
                 print("No music files found in the directory.")
                 return
-
+    
             if self.shuffle:
                 random.shuffle(self.playlist)
-
+    
             self.is_playing = True
             self.is_paused = False
             self._play_current_song()
-
+    
         while self.is_playing:
             if not PygameManager.is_busy() and not self.is_paused:
+                print("Music finished or not playing, moving to next track.")
                 self.play_next()
+            else:
+                print("Music is playing.")
             time.sleep(1)
 
     def _play_current_song(self):
         try:
             current_song = self.playlist[self.current_index]
             PygameManager.load_and_play(current_song)
+            time.sleep(1)  # Add a small delay to ensure the music starts properly
             song_name = os.path.basename(current_song)
             song_name_without_extension = os.path.splitext(song_name)[0]
             now_playing = f"Now Playing: {song_name_without_extension}"
-            self.utils.speak(now_playing)
+            threading.Thread(target=self.utils.speak, args=(now_playing,)).start()  # Use a separate thread for TTS
+            self.is_playing = True
         except pygame.error as e:
             print(f"Error playing music: {e}")
             self.is_playing = False
