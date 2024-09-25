@@ -1,32 +1,57 @@
-# The 'requests' and 'json' libraries are imported. 
-# 'requests' is used to send HTTP requests, while 'json' is used for parsing the JSON data that we receive from the API.
-import requests
-import json
+import os
+import openai
+import uuid
+import re
 
-# An API key is defined here. You'd normally get this from the service you're accessing. It's a form of authentication.
-XI_API_KEY = "<xi-api-key>"
+openai.api_key = 'sk-proj-K8hfsSF9vbG1ccu7Mo50T3BlbkFJXB6nXSORFrhYVjkzTWaR'
 
-# This is the URL for the API endpoint we'll be making a GET request to.
-url = "https://api.elevenlabs.io/v1/voices"
+# Directory to save the audio files
+output_dir = "./tts_audio_files"
+os.makedirs(output_dir, exist_ok=True)
 
-# Here, headers for the HTTP request are being set up. 
-# Headers provide metadata about the request. In this case, we're specifying the content type and including our API key for authentication.
-headers = {
-  "Accept": "application/json",
-  "xi-api-key": "sk_d75e31d1462f955bca620c90ebf6de3d1dfe8ad2921c88ce",
-  "Content-Type": "application/json"
-}
+# List of texts to convert to speech
+texts_to_convert = [
+    "Hello! How can I help you today?",
+    "I'm doing great! How can I help you today?",
+    "Please stop the music player first by saying 'stop music'.",
+    "Here are the top news headlines...",
+    "Pausing music...",
+    "Unpausing music...",
+    "Stopping music...",
+    "Playing next track...",
+    "Quitting the program",
+    "Game stopped. Hope you enjoyed!",
+    "Seeking forward by 10 seconds",
+    "Invalid time. Please provide the number of seconds to seek forward.",
+    "Please provide the task!",
+    "Please provide the task to search for!",
+    "No matching task found.",
+]
 
-# A GET request is sent to the API endpoint. The URL and the headers are passed into the request.
-response = requests.get(url, headers=headers)
+def sanitize_filename(text):
+    # Remove non-alphanumeric characters and replace spaces with underscores
+    return re.sub(r'[^a-zA-Z0-9]', '_', text)[:50]  # Limit filename length to 50 characters
 
-# The JSON response from the API is parsed using the built-in .json() method from the 'requests' library. 
-# This transforms the JSON data into a Python dictionary for further processing.
-data = response.json()
+def generate_tts_audio(text):
+    try:
+        # Generate speech using OpenAI TTS
+        response = openai.audio.speech.create(
+            model='tts-1',
+            voice='shimmer',
+            input=text,
+        )
 
-# A loop is created to iterate over each 'voice' in the 'voices' list from the parsed data. 
-# The 'voices' list consists of dictionaries, each representing a unique voice provided by the API.
-for voice in data['voices']:
-  # For each 'voice', the 'name' and 'voice_id' are printed out. 
-  # These keys in the voice dictionary contain values that provide information about the specific voice.
-  print(f"{voice['name']}; {voice['voice_id']}")
+        # Generate a sanitized filename based on the text
+        filename = sanitize_filename(text)
+        save_file_path = os.path.join(output_dir, f"{filename}.mp3")
+
+        # Save the audio to a file
+        response.stream_to_file(save_file_path)
+
+        print(f"{save_file_path}: A new audio file was saved successfully!")
+    except Exception as e:
+        print(f"Error in generate_tts_audio: {e}")
+
+# Convert each text in the list to speech and save the audio files
+for text in texts_to_convert:
+    generate_tts_audio(text)

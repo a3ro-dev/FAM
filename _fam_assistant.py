@@ -125,22 +125,22 @@ class FamAssistant:
 
     def handle_known_commands(self, command):
         if any(greet in command for greet in ["hi", "hello", "wassup", "what's up", "hey", "sup"]):
-            self.util.speak("Hello! How can I help you today?")
+            self.repSpeak('/home/pi/FAM/tts_audio_files/Hello__How_can_I_help_you_today_.mp3')
         elif "how are you" in command:
-            self.util.speak("I'm doing great! How can I help you today?")
+            self.repSpeak('/home/pi/FAM/tts_audio_files/I_m_doing_great__How_can_I_help_you_today_.mp3')
         elif any(time in command for time in ["time", "what time is it", "current time"]):
             self.util.speak(self.util.getTime())
         elif any(date in command for date in ["date", "what's the date", "current date"]):
             self.util.speak(self.util.getDate())
         elif any(vision in command for vision in ["vision", "eyes", "look", "see", "camera"]):
             self.util.captureImage()
-            reply = str(self.gpt.generate_text_with_image(f"{command}", r"assets/image.jpg"))
+            reply = str(self.gpt.generate_text_with_image(f"{command}", "assets/image.jpg"))
             self.util.playChime('load')
             self.util.speak(reply)
         elif any(start in command for start in ["start", "start my day", "good morning"]):
             self.util.startMyDay()
         elif any(news in command for news in ["news", "daily news", "what's happening", "what's the news"]):
-            self.util.speak("Here are the top news headlines...")
+            self.repSpeak('/home/pi/FAM/tts_audio_files/Here_are_the_top_news_headlines___.mp3')
             news = self.util.getNews()
             for headline in news:
                 self.util.speak(headline)
@@ -152,26 +152,30 @@ class FamAssistant:
         elif "play music" in command:
             self.music_player.play_music_thread()
         elif "pause" in command:
-            self.util.speak("Pausing music...")
+            self.repSpeak('/home/pi/FAM/tts_audio_files/Pausing_music___.mp3')
             self.music_player.pause_music()
         elif "resume" in command:
-            self.util.speak("Unpausing music...")
+            self.repSpeak('/home/pi/FAM/tts_audio_files/Unpausing_music___.mp3')
             self.music_player.unpause_music()
         elif "stop" in command:
-            self.util.speak("Stopping music...")
+            self.repSpeak('/home/pi/FAM/tts_audio_files/Stopping_music___.mp3')
             self.music_player.stop_music()
         elif any(skip in command for skip in ["next", "skip"]):
-            self.util.speak("Playing next track...")
+            self.repSpeak('/home/pi/FAM/tts_audio_files/Playing_next_track___.mp3')
             self.music_player.play_next()
         elif "seek forward" in command:
+            self.repSpeak('/home/pi/FAM/tts_audio_files/Seeking_forward_by_10_seconds.mp3')
             self.seek_forward()
         elif "shut down" in command or "shutdown" in command:
-            self.util.speak("Quitting the program")
+            self.repSpeak('/home/pi/FAM/tts_audio_files/Quitting_the_program.mp3')
             self.stop()
+            subprocess.run(["sudo", "shutdown", "now"])
             sys.exit(0)
         elif any(task in command for task in ["add task", "add a task", "add a new task"]):
+            self.repSpeak('/home/pi/FAM/tts_audio_files/Please_provide_the_task_.mp3')
             self.add_task()
         elif any(search in command for search in ["search task", "search for task"]):
+            self.repSpeak('/home/pi/FAM/tts_audio_files/Please_provide_the_task_to_search_for_.mp3')
             self.search_task()
         elif any(game in command for game in ["play game", "start game"]):
             self.games.play_game()
@@ -179,7 +183,10 @@ class FamAssistant:
             self.util.speak(f"Game started on http://{ip_address}:8080. Have Fun!") 
         elif any(game in command for game in ["stop game", "end game"]):
             self.games.stop_game()
-            self.util.speak("Game stopped. Hope you enjoyed!")
+            self.repSpeak('/home/pi/FAM/tts_audio_files/game_over.mp3')
+    
+    def repSpeak(self, file):
+        subprocess.run(['ffplay', '-nodisp', '-autoexit', file], check=True)
 
     def handle_unknown_command(self, command):
         reply = str(self.gpt.live_chat_with_ai(str(command)))
@@ -235,5 +242,5 @@ commands = {
     "search task", "search for task", "how are you", "hi", "hello", "wassup", "what's up", "hey", "sup", "time", 
     "what time is it", "current time", "date", "what's the date", "current date", "vision", "eyes", "start", 
     "start my day", "good morning", "news", "daily news", "what's happening", "what's the news", "play", 
-    "play music", "pause", "resume", "stop", "next", "skip", "add task", "seek forward", "shut down", "music"
+    "play music", "pause", "resume", "stop", "next", "skip", "add task", "seek forward", "shut down", "shutdown" "music"
 }

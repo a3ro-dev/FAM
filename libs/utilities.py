@@ -11,10 +11,9 @@ from datetime import datetime
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 import smtplib
-from elevenlabs import VoiceSettings
-from elevenlabs.client import ElevenLabs
+import openai
 import subprocess
-from pydub import AudioSegment #type: ignore
+from pydub import AudioSegment  # type: ignore
 import uuid
 import os
 
@@ -30,11 +29,10 @@ success = config['utilities']['audio_files']['success']
 error = config['utilities']['audio_files']['error']
 load = config['utilities']['audio_files']['load']
 newsAPI = config['utilities']['news_api_key']
-weatherAPI = config['utilities']['weather_api_key'] 
+weatherAPI = config['utilities']['weather_api_key']
 
 Gpt = gpt.Generation()
-ELEVENLABS_API_KEY = config['main']['eleven_labs_api_key']
-client = ElevenLabs(api_key=ELEVENLABS_API_KEY)
+openai.api_key = config['main']['openai_api_key']
 
 class Utilities:
     def __init__(self):
@@ -53,39 +51,28 @@ class Utilities:
                 raise ValueError(f"Unknown chime type: {type}")
         except Exception as e:
             print(f"Error in playChime: {e}")
-    
+
     def speak(self, text: str):
         try:
-            # Calling the text_to_speech conversion API with detailed parameters
-            response = client.text_to_speech.convert(
-                voice_id="EXAVITQu4vr4xnSDxMaL",  # Sarah pre-made voice
-                output_format="mp3_22050_32",
-                text=text,
-                model_id="eleven_english_v1",  # not using the multilingual model
-                voice_settings=VoiceSettings(
-                    stability=0.5,
-                    similarity_boost=0.8,
-                    style=0.0,
-                    use_speaker_boost=True,
-                ),
+            # Generate speech using OpenAI TTS
+            response = openai.audio.speech.create(
+                model="tts-1",
+                voice="shimmer",
+                input=text,
             )
-    
             # Generating a unique file name for the output MP3 file
             save_file_path = f"/home/pi/FAM/assets/cache/{uuid.uuid4()}.mp3"
-    
-            # Writing the audio to a file
-            with open(save_file_path, "wb") as f:
-                for chunk in response:
-                    if chunk:
-                        f.write(chunk)
-    
+
+            # Save the audio to a file
+            response.stream_to_file(save_file_path)
+
             print(f"{save_file_path}: A new audio file was saved successfully!")
-    
+
             # Play the saved audio file
             subprocess.run(['ffplay', '-nodisp', '-autoexit', save_file_path], check=True)
         except Exception as e:
             print(f"Error in speak: {e}")
-            
+
     def getSpeech(self):
         if not shutil.which("flac"):
             print("FLAC conversion utility not available. Please install FLAC.")
@@ -104,7 +91,7 @@ class Utilities:
             self.playChime('error')
             print(f"Error in getSpeech: {e}")
         return ""
-    
+
     def getTime(self):
         return time.ctime()
 
@@ -151,7 +138,7 @@ class Utilities:
         except Exception as e:
             print(f"Error in getWeather: {e}")
             return None
-        
+
     @lru_cache(maxsize=32)
     def getNews(self, api_key=newsAPI, num_articles=5):
         url = f"https://newsapi.org/v2/top-headlines?country=in&apiKey={api_key}"
@@ -159,23 +146,23 @@ class Utilities:
             response = requests.get(url)
             response.raise_for_status()
             data = response.json()
-            
+
             # Debugging: Print the raw API response
             print("API Response:", data)
-            
+
             articles = data.get("articles", [])
             if len(articles) < num_articles:
                 print(f"Only {len(articles)} articles available, cannot select {num_articles}")
                 return []
-            
+
             selected_articles = random.sample(articles, min(num_articles, len(articles)))
-        
+
             newsList = []
             for article in selected_articles:
                 news = Gpt.generate_text_response(f"Summarize the given article in a journalistic style, focusing on the key points and events. Please avoid including any hyperlinks.\n{article}")
                 self.playChime('success')
                 newsList.append(news)
-        
+
             return newsList
         except requests.exceptions.RequestException as e:
             self.playChime('error')
@@ -185,10 +172,10 @@ class Utilities:
             self.playChime('error')
             print(f"Error in getNews: {e}")
             return []
-        
+
     def get_part_of_day(self):
         current_hour = datetime.now().hour
-    
+
         if current_hour < 12:
             return "morning"
         elif 12 <= current_hour < 17:
@@ -197,20 +184,20 @@ class Utilities:
             return "evening"
         else:
             return "night"
-    
+
     def startMyDay(self, location='Allahabad'):
         try:
             part_of_day = self.get_part_of_day()
             self.speak(f"Good {part_of_day}!")
             self.speak(f"Today is {self.getDate()}")
             self.speak(f"The current time is {self.getTime()}")
-    
+
             weather_report = self.getWeather(location)
             if weather_report:
                 self.speak(str(weather_report))
             else:
                 self.speak(f"Sorry, I couldn't fetch the weather for {location}")
-    
+
             news_headlines = self.getNews()
             if news_headlines:
                 self.speak("Here are today's top news headlines.")
@@ -218,7 +205,7 @@ class Utilities:
                     self.speak(news)
             else:
                 self.speak("Sorry, I couldn't fetch the news headlines.")
-    
+
             self.speak(f"That's all for now. Have a great {part_of_day}!")
         except Exception as e:
             self.speak(f"Sorry, I encountered an error: {e}")
@@ -250,18 +237,18 @@ class Utilities:
     def captureImage(self, save_path=imgPath):
         try:
             time.sleep(1)
-            
+
             camera = cv2.VideoCapture(0)
             if not camera.isOpened():
                 self._handle_camera_error("Failed to open camera")
-            
+
             camera.set(cv2.CAP_PROP_FRAME_WIDTH, 1920)
             camera.set(cv2.CAP_PROP_FRAME_HEIGHT, 1080)
-    
+
             ret, frame = camera.read()
             if not ret:
                 self._handle_camera_error("Failed to capture image")
-    
+
             cv2.imwrite(save_path, frame)
             self.playChime('success')
         except Exception as e:

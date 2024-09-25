@@ -15,4 +15,3 @@ wikipedia-api
 numpy
 pyttsx3
 pydub
-elevenlabs
