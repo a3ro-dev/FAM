@@ -54,20 +54,12 @@ class Utilities:
 
     def speak(self, text: str):
         try:
-            # Calling the text_to_speech conversion API with detailed parameters
-            response = client.text_to_speech.convert(
-                voice_id="EXAVITQu4vr4xnSDxMaL",  # Sarah pre-made voice
-                output_format="mp3_22050_32",
-                text=text,
-                model_id="eleven_english_v1",  # not using the multilingual model
-                voice_settings=VoiceSettings(
-                    stability=0.5,
-                    similarity_boost=0.8,
-                    style=0.0,
-                    use_speaker_boost=True,
-                ),
+            # Generate speech using OpenAI TTS
+            response = openai.audio.speech.create(
+                model="tts-1",
+                voice="shimmer",
+                input=text,
             )
-    
             # Generating a unique file name for the output MP3 file
             save_file_path = f"/home/pi/FAM/assets/cache/{uuid.uuid4()}.mp3"
 
