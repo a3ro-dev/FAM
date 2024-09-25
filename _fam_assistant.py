@@ -85,6 +85,7 @@ class FamAssistant:
             self.thread = threading.Thread(target=self.run)
             self.thread.start()
             logging.info("Assistant started and listening for keyword.")
+            self.util.playChime('success')
         except Exception as e:
             logging.error(f"Error in start: {e}")
 
