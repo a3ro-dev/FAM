@@ -7,11 +7,11 @@ from moviepy.editor import AudioFileClip
 from youtube_search import YoutubeSearch
 from fuzzywuzzy import fuzz
 import yaml
+from typing import Optional
 
 # Load configuration
 with open('conf/config.yaml') as file:
     config = yaml.safe_load(file)
-
 
 # Constants for configuration keys and file extensions
 CONFIG_PATH = 'conf/config.yaml'
@@ -34,7 +34,7 @@ class MusicSearch:
     def shutdown(self):
         self.executor.shutdown(wait=True)
 
-    def search_local_music(self, song_name: str) -> str:
+    def search_local_music(self, song_name: str) -> Optional[str]:
         for filename in os.listdir(self.output_path):
             if filename.endswith(MUSIC_EXTENSIONS):
                 match_ratio = fuzz.ratio(song_name.lower(), filename.lower())
@@ -42,7 +42,7 @@ class MusicSearch:
                     return os.path.join(self.output_path, filename)
         return None
 
-    def search_youtube(self, song_name: str) -> str:
+    def search_youtube(self, song_name: str) -> Optional[str]:
         try:
             results = YoutubeSearch(song_name, max_results=1).to_dict()
             if not results:
@@ -53,7 +53,7 @@ class MusicSearch:
             logging.error(f"Error searching YouTube: {e}")
             return None
 
-    def download_audio(self, url: str) -> str:
+    def download_audio(self, url: str) -> Optional[str]:
         try:
             yt = YouTube(url)
             audio_stream = yt.streams.filter(only_audio=True).first()
@@ -66,7 +66,7 @@ class MusicSearch:
             logging.error(f"Error downloading audio: {e}")
             return None
 
-    def convert_to_mp3(self, video_path: str) -> str:
+    def convert_to_mp3(self, video_path: str) -> Optional[str]:
         try:
             audio_path = os.path.join(self.output_path, f"{os.path.splitext(os.path.basename(video_path))[0]}.mp3")
             audio = AudioFileClip(video_path)
@@ -77,7 +77,7 @@ class MusicSearch:
             logging.error(f"Error converting to MP3: {e}")
             return None
 
-    def search_and_download_music(self, song_name: str) -> str:
+    def search_and_download_music(self, song_name: str) -> Optional[str]:
         local_file = self.search_local_music(song_name)
         if local_file:
             return local_file

@@ -2,10 +2,13 @@ import os
 import random
 import threading
 import time
-import libs.pygame_manager
+import logging
 import pygame
-PygameManager = libs.pygame_manager.PygameManager()
+import libs.pygame_manager as pygame_manager
 import libs.utilities as utilities
+
+# Configure logging
+logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
 
 # Constants for file extensions
 MUSIC_EXTENSIONS = ('.mp3', '.wav')
@@ -20,55 +23,64 @@ class MusicPlayer:
         self.is_paused = False
         self.lock = threading.Lock()
         self.utils = utilities.Utilities()
+        self.thread = None
+        logging.info("MusicPlayer initialized with directory: %s", music_directory)
 
     def load_playlist(self) -> list:
         if not os.path.isdir(self.music_directory):
             raise ValueError(f"Invalid directory: {self.music_directory}")
-        return [os.path.join(self.music_directory, f) for f in os.listdir(self.music_directory) if f.endswith(MUSIC_EXTENSIONS)]
+        playlist = [os.path.join(self.music_directory, f) for f in os.listdir(self.music_directory) if f.endswith(MUSIC_EXTENSIONS)]
+        logging.info("Playlist loaded with %d files", len(playlist))
+        return playlist
 
     def play_music(self):
         with self.lock:
             if not self.playlist:
-                print("No music files found in the directory.")
+                logging.warning("No music files found in the directory.")
                 return
-    
+
             if self.shuffle:
                 random.shuffle(self.playlist)
-    
+
             self.is_playing = True
             self.is_paused = False
             self._play_current_song()
-    
+
         while self.is_playing:
-            if not PygameManager.is_busy() and not self.is_paused:
-                print("Music finished or not playing, moving to next track.")
-                self.play_next()
-            else:
-                print("Music is playing.")
+            with self.lock:
+                if not pygame_manager.PygameManager.is_busy() and not self.is_paused:
+                    logging.info("Music finished or not playing, moving to next track.")
+                    self.play_next()
+                else:
+                    logging.debug("Music is playing.")
             time.sleep(1)
 
     def _play_current_song(self):
         try:
             current_song = self.playlist[self.current_index]
-            PygameManager.load_and_play(current_song)
+            pygame_manager.PygameManager.load_and_play(current_song)
             time.sleep(1)  # Add a small delay to ensure the music starts properly
             song_name = os.path.basename(current_song)
             song_name_without_extension = os.path.splitext(song_name)[0]
             now_playing = f"Now Playing: {song_name_without_extension}"
             threading.Thread(target=self.utils.speak, args=(now_playing,)).start()  # Use a separate thread for TTS
             self.is_playing = True
+            logging.info("Playing song: %s", current_song)
         except pygame.error as e:
-            print(f"Error playing music: {e}")
+            logging.error("Error playing music: %s", e)
             self.is_playing = False
+            self.play_next()  # Skip to the next song if there's an error
 
     def play_music_thread(self):
         if not self.is_playing:
             self.thread = threading.Thread(target=self.play_music)
             self.thread.start()
+            logging.info("Music playback thread started.")
 
     def play_next(self):
         with self.lock:
             self.current_index = (self.current_index + 1) % len(self.playlist)
+            logging.info("Moving to next song: index %d", self.current_index)
             self._play_current_song()
 
     def pause_music(self):
@@ -76,23 +88,28 @@ class MusicPlayer:
             if self.is_playing and not self.is_paused:
                 pygame.mixer.music.pause()
                 self.is_paused = True
+                logging.info("Music paused.")
 
     def unpause_music(self):
         with self.lock:
             if self.is_playing and self.is_paused:
                 pygame.mixer.music.unpause()
                 self.is_paused = False
+                logging.info("Music unpaused.")
 
     def stop_music(self):
         with self.lock:
             self.is_playing = False
-            PygameManager.stop()
-            if hasattr(self, 'thread') and self.thread is not None:
+            pygame_manager.PygameManager.stop()
+            if self.thread is not None:
                 self.thread.join()
+                self.thread = None
+            logging.info("Music stopped.")
 
     def set_volume(self, volume: int):
         if 0 <= volume <= 100:
-            PygameManager.set_volume(volume)
+            pygame_manager.PygameManager.set_volume(volume)
+            logging.info("Volume set to %d", volume)
         else:
             raise ValueError("Volume must be between 0 and 100")
 
@@ -101,5 +118,6 @@ class MusicPlayer:
             current_pos = pygame.mixer.music.get_pos() / 1000
             try:
                 pygame.mixer.music.set_pos(current_pos + seconds)
+                logging.info("Seeked forward by %d seconds", seconds)
             except pygame.error as e:
-                print(f"Error seeking forward: {e}")
+                logging.error("Error seeking forward: %s", e)
