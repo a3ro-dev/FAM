@@ -13,14 +13,20 @@ import subprocess
 import socket
 import libs.games
 import numpy as np
+import logging
+
+# Initialize logging
+logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
 
 def get_ip_address():
+    """Get the IP address of the machine."""
     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     try:
-        # doesn't even have to be reachable
+        # Attempt to connect to a non-existent IP to determine local IP.
         s.connect(('10.254.254.254', 1))
         ip_address = s.getsockname()[0]
     except Exception:
+        logging.error("Failed to get IP address. Using 127.0.0.1 as default.")
         ip_address = '127.0.0.1'
     finally:
         s.close()
@@ -28,6 +34,7 @@ def get_ip_address():
 
 class FamAssistant:
     def __init__(self, access_key, keyword_path, music_path):
+        """Initialize the assistant with keyword detection, music player, utilities, etc."""
         self.access_key = access_key
         self.keyword_path = keyword_path
         self.music_path = music_path
@@ -42,15 +49,19 @@ class FamAssistant:
         self.util = Utilities.Utilities()
         self.gpt = gpt.Generation()
 
+        logging.info("FamAssistant initialized.")
+
     def init_porcupine(self):
+        """Initialize the Porcupine wake word detection engine."""
         try:
             self.porcupine = pvporcupine.create(access_key=self.access_key, keyword_paths=[self.keyword_path])
-            print("Porcupine initialized successfully.")
+            logging.info("Porcupine initialized successfully.")
         except Exception as e:
-            print(f"Failed to initialize Porcupine: {e}")
+            logging.error(f"Failed to initialize Porcupine: {e}")
             self.porcupine = None
 
     def init_audio_stream(self):
+        """Initialize the audio stream for capturing microphone input."""
         try:
             pa = pyaudio.PyAudio()
             if self.porcupine:
@@ -61,22 +72,24 @@ class FamAssistant:
                     input=True,
                     frames_per_buffer=self.porcupine.frame_length
                 )
-                print("Audio stream initialized successfully.")
+                logging.info("Audio stream initialized successfully.")
         except Exception as e:
-            print(f"Failed to initialize audio stream: {e}")
+            logging.error(f"Failed to initialize audio stream: {e}")
 
     def start(self):
+        """Start the assistant, initialize resources and begin listening for wake words."""
         try:
             self.init_porcupine()
             self.init_audio_stream()
             self.is_running = True
             self.thread = threading.Thread(target=self.run)
             self.thread.start()
-            print("Listening for keyword...")
+            logging.info("Assistant started and listening for keyword.")
         except Exception as e:
-            print(f"Error in start: {e}")
+            logging.error(f"Error in start: {e}")
 
     def run(self):
+        """Run the main loop to detect keywords and respond."""
         try:
             while self.is_running:
                 if self.porcupine and self.audio_stream:
@@ -84,14 +97,16 @@ class FamAssistant:
                     pcm = struct.unpack_from("h" * self.porcupine.frame_length, pcm)
                     keyword_index = self.porcupine.process(pcm)
                     if keyword_index >= 0:
+                        logging.info("Keyword detected.")
                         self.on_keyword_detected()
-                        print("Listening for keyword...")
         except Exception as e:
-            print(f"Error in run: {e}")
+            logging.error(f"Error in run loop: {e}")
 
     def on_keyword_detected(self):
-        print("Keyword detected!")
+        """Handle the event when a keyword is detected."""
         self.util.playChime('success')
+        logging.info("Chime played for keyword detection.")
+
         if self.music_player.is_playing:
             self.music_player.set_volume(20)
 
@@ -99,12 +114,12 @@ class FamAssistant:
 
         try:
             command = self.util.getSpeech()
+            logging.debug(f"Recognized command: {command}")
         except Exception as e:
-            print(f"Error in speech recognition: {e}")
+            logging.error(f"Error in speech recognition: {e}")
             return
 
-        print(f"Recognized command: {command}")
-        if self.music_player.is_playing and command != "stop music" and not any(keyword in command for keyword in ["song", "music"]):
+        if self.music_player.is_playing and "stop" not in command.lower() and not {"song", "music"} & set(command.lower().split()): # type: ignore
             self.util.speak("Please stop the music player first by saying 'stop music'.")
         else:
             self.process_command(command)
@@ -115,7 +130,8 @@ class FamAssistant:
         self.init_audio_stream()
 
     def process_command(self, command):
-        print(f"Processing command: {command}")
+        """Process the command after detecting the wake word."""
+        logging.debug(f"Processing command: {command}")
         command_words = set(command.lower().split())
     
         if command_words & commands:
@@ -132,11 +148,6 @@ class FamAssistant:
             self.util.speak(self.util.getTime())
         elif any(date in command for date in ["date", "what's the date", "current date"]):
             self.util.speak(self.util.getDate())
-        elif any(vision in command for vision in ["vision", "eyes", "look", "see", "camera"]):
-            self.util.captureImage()
-            reply = str(self.gpt.generate_text_with_image(f"{command}", "assets/image.jpg"))
-            self.util.playChime('load')
-            self.util.speak(reply)
         elif any(start in command for start in ["start", "start my day", "good morning"]):
             self.util.startMyDay()
         elif any(news in command for news in ["news", "daily news", "what's happening", "what's the news"]):
@@ -188,10 +199,6 @@ class FamAssistant:
     def repSpeak(self, file):
         subprocess.run(['ffplay', '-nodisp', '-autoexit', file], check=True)
 
-    def handle_unknown_command(self, command):
-        reply = str(self.gpt.live_chat_with_ai(str(command)))
-        self.util.speak(reply)
-
     def seek_forward(self):
         try:
             seconds = 10
@@ -218,14 +225,22 @@ class FamAssistant:
             else:
                 self.util.speak("No matching task found.")
 
+    def handle_unknown_command(self, command):
+        """Handle unknown commands by using the AI chat interface."""
+        logging.info(f"Handling unknown command: {command}")
+        reply = str(self.gpt.live_chat_with_ai(str(command)))
+        self.util.speak(reply)
+
     def close_audio_stream(self):
+        """Close the audio stream to free up resources."""
         if self.audio_stream:
             self.audio_stream.stop_stream()
             self.audio_stream.close()
             self.audio_stream = None
-            print("Audio stream closed.")
+            logging.info("Audio stream closed.")
 
     def stop(self):
+        """Stop the assistant and clean up resources."""
         self.is_running = False
         if self.thread:
             self.thread.join()
@@ -233,14 +248,17 @@ class FamAssistant:
         if self.porcupine:
             self.porcupine.delete()
         self.music_player.stop_music()
+        logging.info("Assistant stopped.")
 
     def run_in_thread(self):
+        """Run the assistant in a separate thread."""
         self.thread = threading.Thread(target=self.start)
         self.thread.start()
 
+# Define known commands as a set for faster lookup
 commands = {
     "search task", "search for task", "how are you", "hi", "hello", "wassup", "what's up", "hey", "sup", "time", 
     "what time is it", "current time", "date", "what's the date", "current date", "vision", "eyes", "start", 
     "start my day", "good morning", "news", "daily news", "what's happening", "what's the news", "play", 
-    "play music", "pause", "resume", "stop", "next", "skip", "add task", "seek forward", "shut down", "shutdown" "music"
+    "play music", "pause", "resume", "stop", "next", "skip", "add task", "seek forward", "shut down", "shutdown", "music"
 }

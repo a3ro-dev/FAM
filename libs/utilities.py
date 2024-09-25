@@ -16,6 +16,10 @@ import subprocess
 from pydub import AudioSegment  # type: ignore
 import uuid
 import os
+import logging
+
+# Configure logging
+logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
 
 # Load configuration
 with open('conf/config.yaml') as file:
@@ -42,74 +46,75 @@ class Utilities:
             "error": error,
             "load": load
         }
+        logging.info("Utilities class initialized.")
 
     def playChime(self, type: str):
         try:
             if type in self.audio_files:
+                logging.debug(f"Playing chime of type: {type}")
                 subprocess.run(['ffplay', '-nodisp', '-autoexit', self.audio_files[type]], check=True)
             else:
                 raise ValueError(f"Unknown chime type: {type}")
         except Exception as e:
-            print(f"Error in playChime: {e}")
+            logging.error(f"Error in playChime: {e}")
 
     def speak(self, text: str):
         try:
-            # Generate speech using OpenAI TTS
+            logging.debug(f"Generating speech for text: {text}")
             response = openai.audio.speech.create(
                 model="tts-1",
                 voice="shimmer",
                 input=text,
             )
-            # Generating a unique file name for the output MP3 file
             save_file_path = f"/home/pi/FAM/assets/cache/{uuid.uuid4()}.mp3"
-
-            # Save the audio to a file
             response.stream_to_file(save_file_path)
-
-            print(f"{save_file_path}: A new audio file was saved successfully!")
-
-            # Play the saved audio file
+            logging.info(f"{save_file_path}: A new audio file was saved successfully!")
             subprocess.run(['ffplay', '-nodisp', '-autoexit', save_file_path], check=True)
         except Exception as e:
-            print(f"Error in speak: {e}")
+            logging.error(f"Error in speak: {e}")
 
     def getSpeech(self):
         if not shutil.which("flac"):
-            print("FLAC conversion utility not available. Please install FLAC.")
+            logging.error("FLAC conversion utility not available. Please install FLAC.")
             return ""
         try:
             r = sr.Recognizer()
             with sr.Microphone() as source:
-                print("Listening for speech...")
+                logging.info("Listening for speech...")
                 r.adjust_for_ambient_noise(source, duration=1)
                 audio = r.listen(source)
-            text = r.recognize(audio)  # Use recognize_google for speech recognition
-            print(f"Recognized speech: {text}")
+            text = r.recognize(audio)
+            logging.info(f"Recognized speech: {text}")
             self.playChime('success')
             return text
         except Exception as e:
             self.playChime('error')
-            print(f"Error in getSpeech: {e}")
+            logging.error(f"Error in getSpeech: {e}")
         return ""
 
     def getTime(self):
-        return time.ctime()
+        current_time = time.ctime()
+        logging.info(f"Current time: {current_time}")
+        return current_time
 
     def getDate(self):
         now = datetime.now()
         day = now.day
         suffix = 'th' if 11 <= day <= 13 else {1: 'st', 2: 'nd', 3: 'rd'}.get(day % 10, 'th')
-        return now.strftime(f"%B {day}{suffix}, %Y")
+        current_date = now.strftime(f"%B {day}{suffix}, %Y")
+        logging.info(f"Current date: {current_date}")
+        return current_date
 
     @lru_cache(maxsize=32)
     def getWeather(self, city: str, api_key=weatherAPI):
         url = f"http://api.openweathermap.org/data/2.5/weather?q={city},in&appid={api_key}"
         try:
+            logging.debug(f"Fetching weather data for city: {city}")
             response = requests.get(url)
             response.raise_for_status()
             data = response.json()
 
-            for key in ["temp", "feels_like", "temp_min", "temp_max"]:
+            for key in {"temp", "feels_like", "temp_min", "temp_max"}:
                 data["main"][key] -= 273.15
 
             finalData = {
@@ -129,52 +134,52 @@ class Utilities:
                 "sunset": data["sys"]["sunset"],
                 "location": data["name"],
             }
-            # Limit the data sent to the GPT model to avoid exceeding token limit
-            print(finalData)
+            logging.debug(f"Weather data: {finalData}")
             return Gpt.generate_text_response(f"Given the following weather data: {finalData}, generate a concise and informative weather report.")
         except requests.exceptions.RequestException as e:
-            print(f"Error in getWeather: {e}")
+            logging.error(f"Error in getWeather: {e}")
             return None
         except Exception as e:
-            print(f"Error in getWeather: {e}")
+            logging.error(f"Error in getWeather: {e}")
             return None
 
     @lru_cache(maxsize=32)
     def getNews(self, api_key=newsAPI, num_articles=5):
         url = f"https://newsapi.org/v2/top-headlines?country=in&apiKey={api_key}"
         try:
+            logging.debug("Fetching news data")
             response = requests.get(url)
             response.raise_for_status()
             data = response.json()
 
-            # Debugging: Print the raw API response
-            print("API Response:", data)
+            logging.debug(f"API Response: {data}")
 
             articles = data.get("articles", [])
             if len(articles) < num_articles:
-                print(f"Only {len(articles)} articles available, cannot select {num_articles}")
+                logging.warning(f"Only {len(articles)} articles available, cannot select {num_articles}")
                 return []
 
             selected_articles = random.sample(articles, min(num_articles, len(articles)))
 
-            newsList = []
+            newsSet = set()
             for article in selected_articles:
                 news = Gpt.generate_text_response(f"Summarize the given article in a journalistic style, focusing on the key points and events. Please avoid including any hyperlinks.\n{article}")
                 self.playChime('success')
-                newsList.append(news)
+                newsSet.add(news)
 
-            return newsList
+            return newsSet
         except requests.exceptions.RequestException as e:
             self.playChime('error')
-            print(f"Error in getNews: {e}")
-            return []
+            logging.error(f"Error in getNews: {e}")
+            return set()
         except Exception as e:
             self.playChime('error')
-            print(f"Error in getNews: {e}")
-            return []
+            logging.error(f"Error in getNews: {e}")
+            return set()
 
     def get_part_of_day(self):
         current_hour = datetime.now().hour
+        logging.debug(f"Current hour: {current_hour}")
 
         if current_hour < 12:
             return "morning"
@@ -209,6 +214,7 @@ class Utilities:
             self.speak(f"That's all for now. Have a great {part_of_day}!")
         except Exception as e:
             self.speak(f"Sorry, I encountered an error: {e}")
+            logging.error(f"Error in startMyDay: {e}")
 
     def send_email(self, recipient: str, subject: str, content: str):
         sender_email = emailID
@@ -225,39 +231,12 @@ class Utilities:
         message.attach(MIMEText(body, "plain"))
 
         try:
+            logging.debug(f"Sending email to {recipient} with subject {subject}")
             server = smtplib.SMTP(smtp_server, smtp_port)
             server.starttls()
             server.login(sender_email, sender_password)
             server.send_message(message)
             server.quit()
-            print("Email sent successfully.")
+            logging.info("Email sent successfully.")
         except Exception as e:
-            print(f"Failed to send email. Error: {e}")
-
-    def captureImage(self, save_path=imgPath):
-        try:
-            time.sleep(1)
-
-            camera = cv2.VideoCapture(0)
-            if not camera.isOpened():
-                self._handle_camera_error("Failed to open camera")
-
-            camera.set(cv2.CAP_PROP_FRAME_WIDTH, 1920)
-            camera.set(cv2.CAP_PROP_FRAME_HEIGHT, 1080)
-
-            ret, frame = camera.read()
-            if not ret:
-                self._handle_camera_error("Failed to capture image")
-
-            cv2.imwrite(save_path, frame)
-            self.playChime('success')
-        except Exception as e:
-            self.playChime('error')
-            print(f"Error in captureImage: {e}")
-        finally:
-            camera.release()
-            cv2.destroyAllWindows()
-
-    def _handle_camera_error(self, message: str):
-        self.playChime('error')
-        raise Exception(message)
+            logging.error(f"Failed to send email. Error: {e}")
