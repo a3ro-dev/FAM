@@ -180,8 +180,8 @@ class FamAssistant:
             self.seek_forward()
         elif "shut down" in command or "shutdown" in command:
             self.repSpeak('/home/pi/FAM/tts_audio_files/Quitting_the_program.mp3')
-            self.stop()
             subprocess.run(["sudo", "shutdown", "now"])
+            self.stop()
             sys.exit(0)
         elif any(task in command for task in ["add task", "add a task", "add a new task"]):
             self.repSpeak('/home/pi/FAM/tts_audio_files/Please_provide_the_task_.mp3')
@@ -227,7 +227,7 @@ class FamAssistant:
                 self.util.speak("No matching task found.")
 
     def handle_unknown_command(self, command):
-        """Handle unknown commands by using the AI chat interface."""
+        """Handle unknown commands by using the AI chat inference."""
         logging.info(f"Handling unknown command: {command}")
         reply = str(self.gpt.live_chat_with_ai(str(command)))
         self.util.speak(reply)
