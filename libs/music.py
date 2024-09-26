@@ -26,6 +26,10 @@ class MusicPlayer:
         self.thread = None
         logging.info("MusicPlayer initialized with directory: %s", music_directory)
 
+        # Initialize pygame mixer and setup an event for track end
+        pygame.mixer.init()
+        pygame.mixer.music.set_endevent(pygame.USEREVENT)  # Custom event when song ends
+
     def load_playlist(self) -> list:
         if not os.path.isdir(self.music_directory):
             raise ValueError(f"Invalid directory: {self.music_directory}")
@@ -47,13 +51,12 @@ class MusicPlayer:
             self._play_current_song()
 
         while self.is_playing:
-            with self.lock:
-                # Ensure the music has finished playing before moving to the next song
-                if not pygame.mixer.music.get_busy() and not self.is_paused:
-                    logging.info("Music finished, moving to next track.")
+            # Wait for an event indicating the song has finished
+            for event in pygame.event.get():
+                if event.type == pygame.USEREVENT:  # Song has ended
+                    logging.info("Song finished, moving to next track.")
                     self.play_next()
-                else:
-                    logging.debug("Music is still playing or paused.")
+
             time.sleep(1)  # Give the loop a small delay to avoid high CPU usage
 
     def _play_current_song(self):
