@@ -48,28 +48,35 @@ class MusicPlayer:
 
         while self.is_playing:
             with self.lock:
-                if not pygame_manager.PygameManager.is_busy() and not self.is_paused:
-                    logging.info("Music finished or not playing, moving to next track.")
+                # Ensure the music has finished playing before moving to the next song
+                if not pygame.mixer.music.get_busy() and not self.is_paused:
+                    logging.info("Music finished, moving to next track.")
                     self.play_next()
                 else:
-                    logging.debug("Music is playing.")
-            time.sleep(1)
+                    logging.debug("Music is still playing or paused.")
+            time.sleep(1)  # Give the loop a small delay to avoid high CPU usage
 
     def _play_current_song(self):
-        try:
-            current_song = self.playlist[self.current_index]
-            pygame_manager.PygameManager.load_and_play(current_song)
-            time.sleep(1)  # Add a small delay to ensure the music starts properly
-            song_name = os.path.basename(current_song)
-            song_name_without_extension = os.path.splitext(song_name)[0]
-            now_playing = f"Now Playing: {song_name_without_extension}"
-            threading.Thread(target=self.utils.speak, args=(now_playing,)).start()  # Use a separate thread for TTS
-            self.is_playing = True
-            logging.info("Playing song: %s", current_song)
-        except pygame.error as e:
-            logging.error("Error playing music: %s", e)
-            self.is_playing = False
-            self.play_next()  # Skip to the next song if there's an error
+        retries = 3  # Try 3 times to play a song before skipping
+        while retries > 0:
+            try:
+                current_song = self.playlist[self.current_index]
+                pygame_manager.PygameManager.load_and_play(current_song)
+                time.sleep(1)  # Ensure music starts playing
+                song_name = os.path.basename(current_song)
+                song_name_without_extension = os.path.splitext(song_name)[0]
+                now_playing = f"Now Playing: {song_name_without_extension}"
+                threading.Thread(target=self.utils.speak, args=(now_playing,)).start()  # Announce now playing song
+                self.is_playing = True
+                logging.info("Playing song: %s", current_song)
+                break
+            except pygame.error as e:
+                logging.error("Error playing music: %s. Retries left: %d", e, retries)
+                retries -= 1
+                time.sleep(1)  # Short delay before retrying
+                if retries == 0:
+                    logging.error("Failed to play the song. Skipping to next.")
+                    self.play_next()
 
     def play_music_thread(self):
         if not self.is_playing:
@@ -79,6 +86,7 @@ class MusicPlayer:
 
     def play_next(self):
         with self.lock:
+            # Move to the next song or loop back if it's the end of the playlist
             self.current_index = (self.current_index + 1) % len(self.playlist)
             logging.info("Moving to next song: index %d", self.current_index)
             self._play_current_song()
