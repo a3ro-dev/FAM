@@ -66,7 +66,9 @@ class MusicPlayer:
                 song_name = os.path.basename(current_song)
                 song_name_without_extension = os.path.splitext(song_name)[0]
                 self.set_volume(volume=20)
+                time.sleep(0.5)
                 now_playing = f"Now Playing: {song_name_without_extension}"
+                time.sleep(0.5)
                 self.set_volume(100)
                 threading.Thread(target=self.utils.speak, args=(now_playing,)).start()  # Announce now playing song
                 self.is_playing = True
