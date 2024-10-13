@@ -90,6 +90,7 @@ class Utilities:
         except Exception as e:
             self.playChime('error')
             logging.error(f"Error in getSpeech: {e}")
+            return ""
 
     def getTime(self):
         current_time = time.ctime()
