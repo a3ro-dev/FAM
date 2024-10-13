@@ -107,29 +107,31 @@ class FamAssistant:
         """Handle the event when a keyword is detected."""
         self.util.playChime('success')
         logging.info("Chime played for keyword detection.")
-
+    
         if self.music_player.is_playing:
             self.music_player.set_volume(20)
-
+    
         self.close_audio_stream()
-
+    
         try:
             command = self.util.getSpeech()
+            if not command:  # Check for empty command
+                return
             logging.debug(f"Recognized command: {command}")
         except Exception as e:
             logging.error(f"Error in speech recognition: {e}")
+            self.init_audio_stream()  # Ensure audio stream is reinitialized
             return
-
+    
         if self.music_player.is_playing and "stop" not in command.lower() and not {"song", "music"} & set(command.lower().split()): # type: ignore
             self.util.speak("Please stop the music player first by saying 'stop music'.")
         else:
             self.process_command(command)
-
+    
         if self.music_player.is_playing:
             self.music_player.set_volume(100)
-
+    
         self.init_audio_stream()
-
     def process_command(self, command):
         """Process the command after detecting the wake word."""
         logging.debug(f"Processing command: {command}")
