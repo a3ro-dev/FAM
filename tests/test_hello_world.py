@@ -3,6 +3,7 @@ import time
 import threading
 import logging
 import numpy as np
+from collections import deque
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -27,13 +28,15 @@ class KalmanFilter:
         return self.estimate
 
 class GestureModule:
-    def __init__(self, trigger_pin=18, echo_pin=24, distance_thresholds=(10, 20), gesture_interval=0.5):
+    def __init__(self, trigger_pin=18, echo_pin=24, distance_thresholds=(10, 20), gesture_interval=0.5, debounce_time=1.0):
         self.trigger_pin = trigger_pin
         self.echo_pin = echo_pin
         self.distance_thresholds = distance_thresholds
         self.gesture_interval = gesture_interval
+        self.debounce_time = debounce_time
         self.kalman_filter = KalmanFilter()
         self.previous_distance = None
+        self.distance_history = deque(maxlen=5)  # Moving average filter
         self.setup_gpio()
 
     def setup_gpio(self):
@@ -72,52 +75,71 @@ class GestureModule:
             logging.warning(f"Error measuring distance: {e}")
             return None
 
+    def get_smoothed_distance(self):
+        distance = self.measure_distance()
+        if distance is not None:
+            self.distance_history.append(distance)
+            return np.mean(self.distance_history)
+        return None
+
     def detect_gestures(self):
-        self.previous_distance = self.measure_distance()
+        self.previous_distance = self.get_smoothed_distance()
+        last_gesture_time = time.time()
 
         while True:
-            current_distance = self.measure_distance()
+            current_distance = self.get_smoothed_distance()
 
             if current_distance is None:
                 time.sleep(self.gesture_interval)
                 continue
 
+            current_time = time.time()
+            if current_time - last_gesture_time < self.debounce_time:
+                time.sleep(self.gesture_interval)
+                continue
+
             if current_distance < self.distance_thresholds[0]:
                 logging.info("Hand Wave Detected")
+                last_gesture_time = current_time
                 # Action: Toggle play/pause for music
             elif self.distance_thresholds[0] <= current_distance < self.distance_thresholds[1]:
                 logging.info("Hand Hold Detected")
+                last_gesture_time = current_time
                 # Action: Start or stop a timer
             elif current_distance - self.previous_distance > 10:
                 logging.info("Hand Swipe Detected (Forward)")
+                last_gesture_time = current_time
                 # Action: Skip to the next song
             elif self.previous_distance - current_distance > 10:
                 logging.info("Hand Swipe Detected (Backward)")
+                last_gesture_time = current_time
                 # Action: Skip to the previous song
             elif current_distance < self.previous_distance:
                 logging.info("Hand Approach Detected")
+                last_gesture_time = current_time
                 # Action: Increase volume
             elif current_distance > self.previous_distance:
                 logging.info("Hand Retreat Detected")
+                last_gesture_time = current_time
                 # Action: Decrease volume
 
             self.previous_distance = current_distance
             time.sleep(self.gesture_interval)
 
-    def start_gesture_detection(self):
-        logging.info("Starting gesture detection...")
-        gesture_thread = threading.Thread(target=self.detect_gestures, daemon=True)
-        gesture_thread.start()
-
     def detect_hand_gesture(self):
         logging.info("Starting hand gesture detection...")
         while True:
-            current_distance = self.measure_distance()
+            current_distance = self.get_smoothed_distance()
             if current_distance is not None and 5 <= current_distance <= 10:  # Adjustable range
                 logging.info("Hand Gesture Detected")
                 return True
             time.sleep(self.gesture_interval)
         return False
+
+    def start_gesture_detection(self):
+        logging.info("Starting gesture detection...")
+        gesture_thread = threading.Thread(target=self.detect_gestures, daemon=True)
+        gesture_thread.start()
 
     def start_hand_gesture_detection(self):
         hand_gesture_thread = threading.Thread(target=self.detect_hand_gesture, daemon=True)
@@ -135,7 +157,7 @@ if __name__ == "__main__":
         gesture_module.start_hand_gesture_detection()
 
         while True:
-            time.sleep(1)  # Keep the main thread alive
+            time.sleep(0.001)  # Keep the main thread alive
     except KeyboardInterrupt:
         gesture_module.stop()
         logging.info("Gesture detection stopped.")
