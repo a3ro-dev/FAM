@@ -115,7 +115,7 @@ class FamAssistant:
     
         try:
             command = self.util.getSpeech()
-            if not command:  # Check for empty command
+            if not command:  # Check for empty commande
                 return
             logging.debug(f"Recognized command: {command}")
         except Exception as e:
