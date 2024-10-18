@@ -28,14 +28,13 @@ class KalmanFilter:
         return self.estimate
 
 class GestureModule:
-    def __init__(self, trigger_pin=18, echo_pin=24, distance_thresholds=(10, 20), gesture_interval=0.2, debounce_time=1.0):
+    def __init__(self, trigger_pin=18, echo_pin=24, distance_range=(2, 5), gesture_interval=0.2, debounce_time=1.0):
         self.trigger_pin = trigger_pin
         self.echo_pin = echo_pin
-        self.distance_thresholds = distance_thresholds
+        self.distance_range = distance_range
         self.gesture_interval = gesture_interval
         self.debounce_time = debounce_time
         self.kalman_filter = KalmanFilter()
-        self.previous_distance = None
         self.distance_history = deque(maxlen=3)  # Shorter moving average window
         self.setup_gpio()
 
@@ -86,8 +85,8 @@ class GestureModule:
             return np.mean(self.distance_history)  # Moving average smoothing
         return None
 
-    def detect_gestures(self):
-        self.previous_distance = self.get_smoothed_distance()
+    def detect_hand_gesture(self):
+        logging.info("Starting hand gesture detection...")
         last_gesture_time = time.time()
 
         while True:
@@ -102,42 +101,18 @@ class GestureModule:
                 time.sleep(self.gesture_interval)
                 continue
 
-            gesture_detected = False
-            if current_distance < self.distance_thresholds[0]:
-                logging.info("Hand Wave Detected")
-                # Action: Toggle play/pause for music
-                gesture_detected = True
-            elif self.distance_thresholds[0] <= current_distance < self.distance_thresholds[1]:
-                logging.info("Hand Hold Detected")
-                # Action: Start or stop a timer
-                gesture_detected = True
-            elif current_distance - self.previous_distance > 10:
-                logging.info("Hand Swipe Detected (Forward)")
-                # Action: Skip to the next song
-                gesture_detected = True
-            elif self.previous_distance - current_distance > 10:
-                logging.info("Hand Swipe Detected (Backward)")
-                # Action: Skip to the previous song
-                gesture_detected = True
-            elif current_distance < self.previous_distance:
-                logging.info("Hand Approach Detected")
-                # Action: Increase volume
-                gesture_detected = True
-            elif current_distance > self.previous_distance:
-                logging.info("Hand Retreat Detected")
-                # Action: Decrease volume
-                gesture_detected = True
-
-            if gesture_detected:
+            if self.distance_range[0] <= current_distance <= self.distance_range[1]:
+                logging.info("Hand Gesture Detected")
                 last_gesture_time = current_time
+                # Action: Invoke speech recognition or any other action
+                # For example: self.invoke_speech_recognition()
+                # Add your action here
 
-            self.previous_distance = current_distance
             time.sleep(self.gesture_interval)
 
-    def start_gesture_detection(self):
-        logging.info("Starting gesture detection...")
-        gesture_thread = threading.Thread(target=self.detect_gestures, daemon=True)
-        gesture_thread.start()
+    def start_hand_gesture_detection(self):
+        hand_gesture_thread = threading.Thread(target=self.detect_hand_gesture, daemon=True)
+        hand_gesture_thread.start()
 
     def stop(self):
         logging.info("Stopping gesture detection...")
@@ -147,7 +122,7 @@ class GestureModule:
 if __name__ == "__main__":
     try:
         gesture_module = GestureModule()
-        gesture_module.start_gesture_detection()
+        gesture_module.start_hand_gesture_detection()
 
         while True:
             time.sleep(0.01)  # Keep the main thread alive with a minimal sleep to reduce CPU load
