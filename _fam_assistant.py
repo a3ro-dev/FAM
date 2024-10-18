@@ -14,6 +14,9 @@ import socket
 import libs.games
 import numpy as np
 import logging
+import RPi.GPIO as GPIO
+import time
+from collections import deque
 
 # Initialize logging
 logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -32,6 +35,94 @@ def get_ip_address():
         s.close()
     return ip_address
 
+class GestureModule:
+    def __init__(self, trigger_pin=18, echo_pin=24, distance_range=(2, 5), gesture_interval=0.2, debounce_time=1.0):
+        self.trigger_pin = trigger_pin
+        self.echo_pin = echo_pin
+        self.distance_range = distance_range
+        self.gesture_interval = gesture_interval
+        self.debounce_time = debounce_time
+        self.distance_history = deque(maxlen=3)  # Shorter moving average window
+        self.setup_gpio()
+
+    def setup_gpio(self):
+        GPIO.setmode(GPIO.BCM)
+        GPIO.setup(self.trigger_pin, GPIO.OUT)
+        GPIO.setup(self.echo_pin, GPIO.IN)
+        GPIO.output(self.trigger_pin, False)  # Ensure trigger pin is off
+
+    def cleanup_gpio(self):
+        GPIO.cleanup()
+
+    def measure_distance(self):
+        try:
+            # Trigger the sensor
+            GPIO.output(self.trigger_pin, True)
+            time.sleep(0.00001)
+            GPIO.output(self.trigger_pin, False)
+
+            start_time = time.time()
+            stop_time = time.time()
+
+            # Capture pulse start
+            while GPIO.input(self.echo_pin) == 0:
+                start_time = time.time()
+                if time.time() - start_time > 0.02:  # Timeout if sensor takes too long
+                    return None
+
+            # Capture pulse end
+            while GPIO.input(self.echo_pin) == 1:
+                stop_time = time.time()
+                if stop_time - start_time > 0.02:  # Timeout if sensor takes too long
+                    return None
+
+            # Calculate distance (Time * Speed of Sound / 2)
+            time_elapsed = stop_time - start_time
+            distance = (time_elapsed * 34300) / 2  # Distance in cm
+
+            return distance
+        except Exception as e:
+            logging.warning(f"Error measuring distance: {e}")
+            return None
+
+    def get_smoothed_distance(self):
+        distance = self.measure_distance()
+        if distance is not None:
+            self.distance_history.append(distance)
+            return np.mean(self.distance_history)  # Moving average smoothing
+        return None
+
+    def detect_hand_gesture(self):
+        logging.info("Starting hand gesture detection...")
+        last_gesture_time = time.time()
+
+        while True:
+            current_distance = self.get_smoothed_distance()
+
+            if current_distance is None:
+                time.sleep(self.gesture_interval)
+                continue
+
+            current_time = time.time()
+            if current_time - last_gesture_time < self.debounce_time:
+                time.sleep(self.gesture_interval)
+                continue
+
+            if self.distance_range[0] <= current_distance <= self.distance_range[1]:
+                logging.info("Hand Gesture Detected")
+                last_gesture_time = current_time
+                return True
+
+            time.sleep(self.gesture_interval)
+
+    def start_hand_gesture_detection(self):
+        hand_gesture_thread = threading.Thread(target=self.detect_hand_gesture, daemon=True)
+        hand_gesture_thread.start()
+
+    def stop(self):
+        logging.info("Stopping gesture detection...")
+        self.cleanup_gpio()
+
 class FamAssistant:
     def __init__(self, access_key, keyword_path, music_path):
         """Initialize the assistant with keyword detection, music player, utilities, etc."""
@@ -48,6 +139,7 @@ class FamAssistant:
         self.task_manager = clock.TaskManager()
         self.util = Utilities.Utilities()
         self.gpt = gpt.Generation()
+        self.gesture_module = GestureModule()
 
         logging.info("FamAssistant initialized.")
 
@@ -79,12 +171,13 @@ class FamAssistant:
     def start(self):
         """Start the assistant, initialize resources and begin listening for wake words."""
         try:
+            self.gesture_module.start_hand_gesture_detection()
             self.init_porcupine()
             self.init_audio_stream()
             self.is_running = True
             self.thread = threading.Thread(target=self.run)
             self.thread.start()
-            logging.info("Assistant started and listening for keyword.")
+            logging.info("Assistant started and listening for keyword or looking for gesture.")
             self.util.playChime('success')
         except Exception as e:
             logging.error(f"Error in start: {e}")
@@ -100,6 +193,9 @@ class FamAssistant:
                     if keyword_index >= 0:
                         logging.info("Keyword detected.")
                         self.on_keyword_detected()
+                if self.gesture_module.detect_hand_gesture():
+                    logging.info("Hand gesture detected.")
+                    self.on_keyword_detected()
         except Exception as e:
             logging.error(f"Error in run loop: {e}")
 
@@ -115,7 +211,7 @@ class FamAssistant:
     
         try:
             command = self.util.getSpeech()
-            if not command:  # Check for empty commande
+            if not command:  # Check for empty command
                 return
             logging.debug(f"Recognized command: {command}")
         except Exception as e:
@@ -132,6 +228,7 @@ class FamAssistant:
             self.music_player.set_volume(100)
     
         self.init_audio_stream()
+
     def process_command(self, command):
         """Process the command after detecting the wake word."""
         logging.debug(f"Processing command: {command}")
