@@ -8,25 +8,6 @@ from collections import deque
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
-class KalmanFilter:
-    def __init__(self, process_variance=1.0, measurement_variance=1.0, initial_estimate=0.0):
-        self.process_variance = process_variance
-        self.measurement_variance = measurement_variance
-        self.estimate = initial_estimate
-        self.error_estimate = 1.0
-
-    def update(self, measurement):
-        # Predict step
-        prior_estimate = self.estimate
-        prior_error = self.error_estimate + self.process_variance
-
-        # Update step
-        blending_factor = prior_error / (prior_error + self.measurement_variance)
-        self.estimate = prior_estimate + blending_factor * (measurement - prior_estimate)
-        self.error_estimate = (1 - blending_factor) * prior_error
-
-        return self.estimate
-
 class GestureModule:
     def __init__(self, trigger_pin=18, echo_pin=24, distance_range=(2, 5), gesture_interval=0.2, debounce_time=1.0):
         self.trigger_pin = trigger_pin
@@ -34,7 +15,6 @@ class GestureModule:
         self.distance_range = distance_range
         self.gesture_interval = gesture_interval
         self.debounce_time = debounce_time
-        self.kalman_filter = KalmanFilter()
         self.distance_history = deque(maxlen=3)  # Shorter moving average window
         self.setup_gpio()
 
@@ -73,7 +53,7 @@ class GestureModule:
             time_elapsed = stop_time - start_time
             distance = (time_elapsed * 34300) / 2  # Distance in cm
 
-            return self.kalman_filter.update(distance)
+            return distance
         except Exception as e:
             logging.warning(f"Error measuring distance: {e}")
             return None
