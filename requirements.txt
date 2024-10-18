@@ -13,6 +13,7 @@ gTTS
 groq
 wikipedia-api
 numpy
+RPi.GPIO
 pyttsx3
 openai
 pydub
