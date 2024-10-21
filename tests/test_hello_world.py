@@ -1,111 +1,96 @@
-import RPi.GPIO as GPIO
-import time
-import threading
-import logging
-import numpy as np
-from collections import deque
+import nltk
+from nltk.tokenize import word_tokenize
+from nltk.corpus import wordnet
+from nltk.stem import WordNetLemmatizer
 
-# Configure logging
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+class CommandProcessor:
+    def __init__(self):
+        self.lemmatizer = WordNetLemmatizer()
 
-class GestureModule:
-    def __init__(self, trigger_pin=18, echo_pin=24, distance_range=(2, 5), gesture_interval=0.2, debounce_time=1.0):
-        self.trigger_pin = trigger_pin
-        self.echo_pin = echo_pin
-        self.distance_range = distance_range
-        self.gesture_interval = gesture_interval
-        self.debounce_time = debounce_time
-        self.distance_history = deque(maxlen=3)  # Shorter moving average window
-        self.setup_gpio()
+    def get_wordnet_pos(self, word):
+        """Map POS tag to first character lemmatize() accepts."""
+        tag = nltk.pos_tag([word])[0][1][0].upper()
+        tag_dict = {"J": wordnet.ADJ, "N": wordnet.NOUN, "V": wordnet.VERB, "R": wordnet.ADV}
+        return tag_dict.get(tag, wordnet.NOUN)
 
-    def setup_gpio(self):
-        GPIO.setmode(GPIO.BCM)
-        GPIO.setup(self.trigger_pin, GPIO.OUT)
-        GPIO.setup(self.echo_pin, GPIO.IN)
-        GPIO.output(self.trigger_pin, False)  # Ensure trigger pin is off
+    def preprocess_command(self, command):
+        """Preprocess the command text: tokenize, lemmatize, and return cleaned words."""
+        tokens = word_tokenize(command.lower())  # Tokenize and lowercase the input
+        lemmatized_tokens = [self.lemmatizer.lemmatize(token, self.get_wordnet_pos(token)) for token in tokens]
+        return lemmatized_tokens
 
-    def cleanup_gpio(self):
-        GPIO.cleanup()
+    def extract_time(self, tokens):
+        """Extract time information from tokens."""
+        time_units = {"minute": "minutes", "hour": "hours", "second": "seconds"}
+        time_value = 0
+        time_unit = "seconds"
+        for i, token in enumerate(tokens):
+            if token.isdigit():
+                time_value = int(token)
+                if i + 1 < len(tokens) and tokens[i + 1] in time_units.values():
+                    time_unit = tokens[i + 1]
+                break
+        return time_value, time_unit
 
-    def measure_distance(self):
-        try:
-            # Trigger the sensor
-            GPIO.output(self.trigger_pin, True)
-            time.sleep(0.00001)
-            GPIO.output(self.trigger_pin, False)
+    def command_matches(self, command_tokens, command_set):
+        """Check if command tokens match any of the known commands using synonym matching."""
+        for token in command_tokens:
+            for known_command in command_set:
+                if token in known_command:
+                    return True
+        return False
 
-            start_time = time.time()
-            stop_time = time.time()
+    def process_command(self, command, commands):
+        """Process the input command."""
+        command_tokens = self.preprocess_command(command)
+        
+        # Matching command tokens with known commands
+        if self.command_matches(command_tokens, commands):
+            return "Known command detected!"
+        else:
+            return "Unknown command. Let me try searching online!"
 
-            # Capture pulse start
-            while GPIO.input(self.echo_pin) == 0:
-                start_time = time.time()
-                if time.time() - start_time > 0.02:  # Timeout if sensor takes too long
-                    return None
+# Pseudo Test Case Statements
+def test_preprocess_command():
+    processor = CommandProcessor()
+    command = "Set a reminder for 5 minutes"
+    expected_tokens = ["set", "a", "reminder", "for", "5", "minute"]
+    assert processor.preprocess_command(command) == expected_tokens, "Tokenization and lemmatization failed"
 
-            # Capture pulse end
-            while GPIO.input(self.echo_pin) == 1:
-                stop_time = time.time()
-                if stop_time - start_time > 0.02:  # Timeout if sensor takes too long
-                    return None
+def test_extract_time():
+    processor = CommandProcessor()
+    tokens = ["set", "a", "reminder", "for", "5", "minutes"]
+    expected_time_value = 5
+    expected_time_unit = "minutes"
+    time_value, time_unit = processor.extract_time(tokens)
+    assert time_value == expected_time_value, "Time value extraction failed"
+    assert time_unit == expected_time_unit, "Time unit extraction failed"
 
-            # Calculate distance (Time * Speed of Sound / 2)
-            time_elapsed = stop_time - start_time
-            distance = (time_elapsed * 34300) / 2  # Distance in cm
+def test_command_matches():
+    processor = CommandProcessor()
+    command_tokens = ["set", "reminder"]
+    command_set = {"set reminder", "set timer", "start stopwatch"}
+    assert processor.command_matches(command_tokens, command_set), "Command matching failed"
 
-            return distance
-        except Exception as e:
-            logging.warning(f"Error measuring distance: {e}")
-            return None
+def test_process_command_known():
+    processor = CommandProcessor()
+    command = "Set a reminder for 5 minutes"
+    command_set = {"set reminder", "set timer", "start stopwatch"}
+    result = processor.process_command(command, command_set)
+    assert result == "Known command detected!", "Known command processing failed"
 
-    def get_smoothed_distance(self):
-        distance = self.measure_distance()
-        if distance is not None:
-            self.distance_history.append(distance)
-            return np.mean(self.distance_history)  # Moving average smoothing
-        return None
+def test_process_command_unknown():
+    processor = CommandProcessor()
+    command = "Play some music"
+    command_set = {"set reminder", "set timer", "start stopwatch"}
+    result = processor.process_command(command, command_set)
+    assert result == "Unknown command. Let me try searching online!", "Unknown command processing failed"
 
-    def detect_hand_gesture(self):
-        logging.info("Starting hand gesture detection...")
-        last_gesture_time = time.time()
+# Run the test cases
+test_preprocess_command()
+test_extract_time()
+test_command_matches()
+test_process_command_known()
+test_process_command_unknown()
 
-        while True:
-            current_distance = self.get_smoothed_distance()
-
-            if current_distance is None:
-                time.sleep(self.gesture_interval)
-                continue
-
-            current_time = time.time()
-            if current_time - last_gesture_time < self.debounce_time:
-                time.sleep(self.gesture_interval)
-                continue
-
-            if self.distance_range[0] <= current_distance <= self.distance_range[1]:
-                logging.info("Hand Gesture Detected")
-                last_gesture_time = current_time
-                # Action: Invoke speech recognition or any other action
-                # For example: self.invoke_speech_recognition()
-                # Add your action here
-
-            time.sleep(self.gesture_interval)
-
-    def start_hand_gesture_detection(self):
-        hand_gesture_thread = threading.Thread(target=self.detect_hand_gesture, daemon=True)
-        hand_gesture_thread.start()
-
-    def stop(self):
-        logging.info("Stopping gesture detection...")
-        self.cleanup_gpio()
-
-# Example usage:
-if __name__ == "__main__":
-    try:
-        gesture_module = GestureModule()
-        gesture_module.start_hand_gesture_detection()
-
-        while True:
-            time.sleep(0.01)  # Keep the main thread alive with a minimal sleep to reduce CPU load
-    except KeyboardInterrupt:
-        gesture_module.stop()
-        logging.info("Gesture detection stopped.")
+print("All tests passed!")

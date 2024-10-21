@@ -105,8 +105,8 @@ class Utilities:
         logging.info(f"Current date: {current_date}")
         return current_date
 
-    @lru_cache(maxsize=32)
-    def getWeather(self, city: str, api_key=weatherAPI):
+    
+    def getWeather(self, city: str, api_key=weatherAPI)-> str:
         url = f"http://api.openweathermap.org/data/2.5/weather?q={city},in&appid={api_key}"
         try:
             logging.debug(f"Fetching weather data for city: {city}")
@@ -138,10 +138,10 @@ class Utilities:
             return Gpt.generate_text_response(f"Given the following weather data: {finalData}, generate a concise and informative weather report.")
         except requests.exceptions.RequestException as e:
             logging.error(f"Error in getWeather: {e}")
-            return None
+            return ""
         except Exception as e:
             logging.error(f"Error in getWeather: {e}")
-            return None
+            return "" 
 
     @lru_cache(maxsize=32)
     def getNews(self, api_key=newsAPI, num_articles=5):
@@ -196,39 +196,41 @@ class Utilities:
             self.speak(f"Good {part_of_day}!")
             self.speak(f"Today is {self.getDate()}")
             self.speak(f"The current time is {self.getTime()}")
-
+    
             weather_report = self.getWeather(location)
             if weather_report:
                 self.speak(str(weather_report))
             else:
                 self.speak(f"Sorry, I couldn't fetch the weather for {location}")
-
+    
             news_headlines = self.getNews()
             if news_headlines:
-                self.speak("Here are today's top news headlines.")
+                self.playChime('success')
                 for news in news_headlines:
                     self.speak(news)
             else:
-                self.speak("Sorry, I couldn't fetch the news headlines.")
-
-            self.speak(f"That's all for now. Have a great {part_of_day}!")
+                self.playChime('error')
         except Exception as e:
-            self.speak(f"Sorry, I encountered an error: {e}")
             logging.error(f"Error in startMyDay: {e}")
 
-    def send_email(self, recipient: str, subject: str, content: str):
+    def send_email(self, recipient: str, subject: str, plain_content: str, html_content: str = ""):
         sender_email = emailID
         sender_password = emailPasswd
         smtp_server = "smtp.gmail.com"
         smtp_port = 587
 
-        message = MIMEMultipart()
+        message = MIMEMultipart("alternative")
         message["From"] = sender_email
         message["To"] = recipient
         message["Subject"] = subject
 
-        body = f"{content}\n\nSent from FAM ASSISTANT"
-        message.attach(MIMEText(body, "plain"))
+        # Create the plain-text and HTML parts
+        plain_part = MIMEText(plain_content, "plain")
+        message.attach(plain_part)
+
+        if html_content:
+            html_part = MIMEText(html_content, "html")
+            message.attach(html_part)
 
         try:
             logging.debug(f"Sending email to {recipient} with subject {subject}")

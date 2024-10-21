@@ -1,3 +1,4 @@
+from datetime import datetime, timedelta
 import pyaudio
 import pvporcupine
 import threading
@@ -9,6 +10,7 @@ import libs.gpt as gpt
 import libs.music as musicP
 import libs.music_search as musicSearch
 import libs.clock as clock
+import libs.bluetooth_manager as btm
 import subprocess
 import socket
 import libs.games
@@ -16,6 +18,10 @@ import numpy as np
 import logging
 import RPi.GPIO as GPIO
 import time
+import nltk
+from nltk.tokenize import word_tokenize
+from nltk.corpus import wordnet
+from nltk.stem import WordNetLemmatizer
 from collections import deque
 
 # Initialize logging
@@ -34,6 +40,54 @@ def get_ip_address():
     finally:
         s.close()
     return ip_address
+
+class CommandProcessor:
+    def __init__(self):
+        self.lemmatizer = WordNetLemmatizer()
+
+    def get_wordnet_pos(self, word):
+        """Map POS tag to first character lemmatize() accepts."""
+        tag = nltk.pos_tag([word])[0][1][0].upper()
+        tag_dict = {"J": wordnet.ADJ, "N": wordnet.NOUN, "V": wordnet.VERB, "R": wordnet.ADV}
+        return tag_dict.get(tag, wordnet.NOUN)
+
+    def preprocess_command(self, command):
+        """Preprocess the command text: tokenize, lemmatize, and return cleaned words."""
+        tokens = word_tokenize(command.lower())  # Tokenize and lowercase the input
+        lemmatized_tokens = [self.lemmatizer.lemmatize(token, self.get_wordnet_pos(token)) for token in tokens]
+        return lemmatized_tokens
+
+    def extract_time(self, tokens):
+        """Extract time information from tokens."""
+        time_units = {"minute": "minutes", "hour": "hours", "second": "seconds"}
+        time_value = 0
+        time_unit = "seconds"
+        for i, token in enumerate(tokens):
+            if token.isdigit():
+                time_value = int(token)
+                if i + 1 < len(tokens) and tokens[i + 1] in time_units.values():
+                    time_unit = tokens[i + 1]
+                break
+        return time_value, time_unit
+
+    def command_matches(self, command_tokens, command_set):
+        """Check if command tokens match any of the known commands using synonym matching."""
+        for token in command_tokens:
+            for known_command in command_set:
+                if token in known_command:
+                    return True
+        return False
+
+    def process_command(self, command, commands):
+        """Process the input command."""
+        command_tokens = self.preprocess_command(command)
+        
+        # Matching command tokens with known commands
+        if self.command_matches(command_tokens, commands):
+            return "Known command detected!"
+        else:
+            return "Unknown command. Let me try searching online!"
+
 
 class GestureModule:
     def __init__(self, trigger_pin=18, echo_pin=24, distance_range=(2, 5), gesture_interval=0.2, debounce_time=1.0):
@@ -140,6 +194,8 @@ class FamAssistant:
         self.util = Utilities.Utilities()
         self.gpt = gpt.Generation()
         self.gesture_module = GestureModule()
+        self.bt_manager = btm.BluetoothManager()
+        self.command_processor = CommandProcessor()
 
         logging.info("FamAssistant initialized.")
 
@@ -230,16 +286,20 @@ class FamAssistant:
         self.init_audio_stream()
 
     def process_command(self, command):
-        """Process the command after detecting the wake word."""
+        """Process the command using NLTK-based tokenization and command matching."""
         logging.debug(f"Processing command: {command}")
-        command_words = set(command.lower().split())
-    
-        if command_words & commands:
+        
+        # Preprocess the command and detect known commands
+        processed_tokens = self.command_processor.preprocess_command(command)
+
+        # Match against known commands
+        if self.command_processor.command_matches(processed_tokens, commands):
             self.handle_known_commands(command)
         else:
             self.handle_unknown_command(command)
 
     def handle_known_commands(self, command):
+        processed_tokens = self.command_processor.preprocess_command(command)
         if any(greet in command for greet in ["hi", "hello", "wassup", "what's up", "hey", "sup"]):
             self.repSpeak('/home/pi/FAM/tts_audio_files/Hello__How_can_I_help_you_today_.mp3')
         elif "how are you" in command:
@@ -291,11 +351,51 @@ class FamAssistant:
         elif any(game in command for game in ["play game", "start game"]):
             self.games.play_game()
             ip_address = get_ip_address()
-            self.util.speak(f"Game started on http://{ip_address}:8080. Have Fun!") 
+            self.util.send_email(recipient='akshatsingh14372@outlook.com', subject="Fam Games Hub Invite", plain_content='' , html_content=self.returnEmailSubject(ip_address))
         elif any(game in command for game in ["stop game", "end game"]):
             self.games.stop_game()
             self.repSpeak('/home/pi/FAM/tts_audio_files/game_over.mp3')
-    
+        elif any(bt in command for bt in ["start bluetooth mode", "enable bluetooth mode", "bluetooth speaker mode"]):
+            self.bt_manager.start_bluetooth_mode()
+            self.util.speak("Bluetooth mode started. The device is now acting as a Bluetooth speaker.")
+        elif any(bt in command for bt in ["stop bluetooth mode", "disable bluetooth mode", "exit bluetooth speaker mode"]):
+            self.bt_manager.stop_bluetooth_mode()
+            self.util.speak("Bluetooth mode stopped.")
+        elif "reminder" in processed_tokens:
+            try:
+                time_value, time_unit = self.command_processor.extract_time(processed_tokens)
+                reminder_time = datetime.now() + timedelta(**{time_unit: time_value})
+                message = " ".join(processed_tokens[processed_tokens.index("to") + 1:])
+                self.task_manager.set_reminder(reminder_time.strftime("%Y-%m-%d %H:%M:%S"), message)
+                self.util.speak(f"Reminder set for {time_value} {time_unit} to {message}")
+            except Exception as e:
+                logging.error(f"Error setting reminder: {e}")
+                self.util.speak("Sorry, I couldn't set the reminder.")
+        elif "timer" in processed_tokens:
+            try:
+                time_value, time_unit = self.command_processor.extract_time(processed_tokens)
+                seconds = time_value * 60 if time_unit == "minutes" else time_value
+                self.task_manager.set_timer(seconds)
+                self.util.speak(f"Timer set for {time_value} {time_unit}.")
+            except Exception as e:
+                logging.error(f"Error setting timer: {e}")
+                self.util.speak("Sorry, I couldn't set the timer.")
+        elif "stopwatch" in processed_tokens:
+            if "start" in processed_tokens:
+                self.task_manager.start_stopwatch()
+                self.util.speak("Stopwatch started.")
+            elif "stop" in processed_tokens:
+                self.task_manager.stop_stopwatch()
+                self.util.speak("Stopwatch stopped.")
+        elif "alarm" in processed_tokens:
+            try:
+                time_str = " ".join(processed_tokens[processed_tokens.index("for") + 1:])
+                self.task_manager.set_alarm(time_str)
+                self.util.speak(f"Alarm set for {time_str}")
+            except Exception as e:
+                logging.error(f"Error setting alarm: {e}")
+                self.util.speak("Sorry, I couldn't set the alarm.")
+
     def repSpeak(self, file):
         subprocess.run(['ffplay', '-nodisp', '-autoexit', file], check=True)
 
@@ -355,10 +455,102 @@ class FamAssistant:
         self.thread = threading.Thread(target=self.start)
         self.thread.start()
 
+    def returnEmailSubject(self, ip_address):
+        html_content = """
+        <!DOCTYPE html>
+        <html lang="en">
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>Fam Games Hub</title>
+            <style>
+                body {
+                    font-family: Arial, sans-serif;
+                    background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+                    margin: 0;
+                    padding: 0;
+                    display: flex;
+                    justify-content: center;
+                    align-items: center;
+                    height: 100vh;
+                }
+                .container {
+                    background: rgba(255, 255, 255, 0.2);
+                    border-radius: 15px;
+                    box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+                    backdrop-filter: blur(10px);
+                    -webkit-backdrop-filter: blur(10px);
+                    border: 1px solid rgba(255, 255, 255, 0.3);
+                    padding: 20px;
+                    max-width: 600px;
+                    width: 100%;
+                    text-align: center;
+                }
+                h1 {
+                    color: #333;
+                }
+                p {
+                    color: #666;
+                    line-height: 1.6;
+                }
+                a.button {
+                    display: inline-block;
+                    padding: 10px 20px;
+                    margin: 20px 0;
+                    font-size: 16px;
+                    color: #fff;
+                    background-color: #007bff;
+                    border-radius: 5px;
+                    text-decoration: none;
+                    transition: background-color 0.3s ease;
+                }
+                a.button:hover {
+                    background-color: #0056b3;
+                }
+                .faq {
+                    text-align: left;
+                    margin-top: 20px;
+                }
+                .faq h2 {
+                    color: #333;
+                }
+                .faq p {
+                    color: #666;
+                }
+                @media (max-width: 600px) {
+                    .container {
+                        padding: 15px;
+                    }
+                    a.button {
+                        font-size: 14px;
+                        padding: 8px 16px;
+                    }
+                }
+            </style>
+        </head>
+        <body>
+            <div class="container">
+                <h1>Fam Games Hub</h1>
+                <p>To launch the Fam Games Hub, simply click the button below:</p>
+                <a href="http://{ip_address}:8080" class="button">Launch Fam Games Hub</a>
+                <div class="faq">
+                    <h2>FAQs</h2>
+                    <h3>What is Fam Games Hub?</h3>
+                    <p>Fam Games Hub is an integrated feature of <a href="https://fam-ai-web.streamlit.app/" target="_blank">Fam Assistant</a> that allows you to launch and manage games directly from your device. With just a simple command, you can start a game server and enjoy your favorite games.</p>
+                    <p>We hope you enjoy this new feature. If you have any questions or need assistance, feel free to reach out to our support team.</p>
+                </div>
+            </div>
+        </body>
+        </html>
+        """
+        return html_content 
+
 # Define known commands as a set for faster lookup
 commands = {
     "search task", "search for task", "how are you", "hi", "hello", "wassup", "what's up", "hey", "sup", "time", 
     "what time is it", "current time", "date", "what's the date", "current date", "vision", "eyes", "start", 
     "start my day", "good morning", "news", "daily news", "what's happening", "what's the news", "play", 
-    "play music", "pause", "resume", "stop", "next", "skip", "add task", "seek forward", "shut down", "shutdown", "music"
+    "play music", "pause", "resume", "stop", "next", "skip", "add task", "seek forward", "shut down", "shutdown", "music",
+    "start bluetooth mode", "enable bluetooth mode", "bluetooth speaker mode", "stop bluetooth mode", "disable bluetooth mode", "exit bluetooth speaker mode",
+    "set reminder", "set timer", "start stopwatch", "stop stopwatch", "set alarm"
 }
