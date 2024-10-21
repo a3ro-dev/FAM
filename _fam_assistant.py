@@ -60,14 +60,31 @@ class CommandProcessor:
     def extract_time(self, tokens):
         """Extract time information from tokens."""
         time_units = {"minute": "minutes", "hour": "hours", "second": "seconds"}
+        number_words = {
+            "zero": 0, "one": 1, "two": 2, "three": 3, "four": 4, "five": 5, "six": 6, "seven": 7, "eight": 8, "nine": 9,
+            "ten": 10, "eleven": 11, "twelve": 12, "thirteen": 13, "fourteen": 14, "fifteen": 15, "sixteen": 16,
+            "seventeen": 17, "eighteen": 18, "nineteen": 19, "twenty": 20, "thirty": 30, "forty": 40, "fifty": 50,
+            "sixty": 60,
+        }
         time_value = 0
         time_unit = "seconds"
-        for i, token in enumerate(tokens):
+        i = 0
+        while i < len(tokens):
+            token = tokens[i]
             if token.isdigit():
-                time_value = int(token)
-                if i + 1 < len(tokens) and tokens[i + 1] in time_units.values():
-                    time_unit = tokens[i + 1]
+                time_value += int(token)
+            elif token in number_words:
+                if i + 1 < len(tokens) and tokens[i + 1] == "half":
+                    time_value += number_words[token] + 0.5
+                    i += 1
+                else:
+                    time_value += number_words[token]
+            elif token == "half":
+                time_value += 0.5
+            elif token in time_units.values():
+                time_unit = token
                 break
+            i += 1
         return time_value, time_unit
 
     def command_matches(self, command_tokens, command_set):
