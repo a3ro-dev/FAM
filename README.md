@@ -77,7 +77,6 @@ config.yaml
   - "Search task"
 
 - **General Commands**:
-  - "What's the weather?"
   - "What's the news?"
   - "What's the time?"
   - "What's the date?"
@@ -86,6 +85,17 @@ config.yaml
   - "Play game"
   - "Stop game"
 
+- **Reminders and Timers**:
+  - "Set a reminder for [time] to [message]"
+  - "Set a timer for [seconds] seconds"
+  - "Start stopwatch"
+  - "Stop stopwatch"
+  - "Set an alarm for [time]"
+
+- **Bluetooth Mode**:
+  - "Start Bluetooth mode"
+  - "Stop Bluetooth mode"
+  
 ### Configuration
 
 The configuration file 

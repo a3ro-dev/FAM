@@ -54,7 +54,7 @@ class TaskManager:
                     self.reminders.remove(reminder)
             time.sleep(60)  # Check every minute
 
-    def set_timer(self, seconds: int) -> None:
+    def set_timer(self, seconds: float) -> None:
         def timer(seconds):
             time.sleep(seconds)
             logging.info("Time's up!")
