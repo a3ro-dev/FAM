@@ -15,5 +15,6 @@ wikipedia-api
 numpy
 RPi.GPIO
 pyttsx3
+nltk
 openai
 pydub

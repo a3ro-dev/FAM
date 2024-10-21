@@ -25,7 +25,7 @@ class Generation:
             encoded_image = base64.b64encode(image.read()).decode("utf-8")
         return encoded_image
     
-    def generate_text_response(self, text: str):
+    def generate_text_response(self, text: str)-> str:
         current_time_date = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     
         system_message = f"Current time and date: {current_time_date}. Do as directed."
@@ -50,7 +50,7 @@ class Generation:
         )
     
         response = completion.choices[0].message.content
-        return response
+        return str(response)
     
     def generate_text_with_image(self, text: str, image: str):
         api_key = openaiKey
