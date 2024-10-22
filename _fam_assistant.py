@@ -41,6 +41,7 @@ def get_ip_address():
         s.close()
     return ip_address
 
+
 class CommandProcessor:
     def __init__(self):
         self.lemmatizer = WordNetLemmatizer()
@@ -68,23 +69,32 @@ class CommandProcessor:
         }
         time_value = 0
         time_unit = "seconds"
+        time_str = ""
+        am_pm = ""
         i = 0
         while i < len(tokens):
             token = tokens[i]
             if token.isdigit():
-                time_value += int(token)
+                time_str += token
             elif token in number_words:
-                if i + 1 < len(tokens) and tokens[i + 1] == "half":
-                    time_value += number_words[token] + 0.5
-                    i += 1
-                else:
-                    time_value += number_words[token]
+                time_str += str(number_words[token])
             elif token == "half":
-                time_value += 0.5
+                time_str += ".5"
+            elif token in ["am", "pm"]:
+                am_pm = token
             elif token in time_units.values():
                 time_unit = token
                 break
             i += 1
+
+        # Convert time_str to a datetime object if it's in the format of HHMM or HMM
+        if len(time_str) in [3, 4]:
+            try:
+                time_format = "%I%M %p" if am_pm else "%H%M"
+                time_value = datetime.strptime(time_str + " " + am_pm, time_format).time()
+            except ValueError:
+                pass
+
         return time_value, time_unit
 
     def command_matches(self, command_tokens, command_set):
@@ -104,8 +114,7 @@ class CommandProcessor:
             return "Known command detected!"
         else:
             return "Unknown command. Let me try searching online!"
-
-
+        
 class GestureModule:
     def __init__(self, trigger_pin=18, echo_pin=24, distance_range=(2, 5), gesture_interval=0.2, debounce_time=1.0):
         self.trigger_pin = trigger_pin
@@ -381,8 +390,16 @@ class FamAssistant:
         elif "reminder" in processed_tokens:
             try:
                 time_value, time_unit = self.command_processor.extract_time(processed_tokens)
-                reminder_time = datetime.now() + timedelta(**{time_unit: time_value})
-                message = " ".join(processed_tokens[processed_tokens.index("to") + 1:])
+                if time_unit == "minutes":
+                    reminder_time = datetime.now() + timedelta(minutes=time_value)
+                elif time_unit == "hours":
+                    reminder_time = datetime.now() + timedelta(hours=time_value)
+                elif time_unit == "seconds":
+                    reminder_time = datetime.now() + timedelta(seconds=time_value)
+                else:
+                    raise ValueError("Unsupported time unit")
+                
+                message = " ".join(processed_tokens[processed_tokens.index("to") + 1:]) if "to" in processed_tokens else ""
                 self.task_manager.set_reminder(reminder_time.strftime("%Y-%m-%d %H:%M:%S"), message)
                 self.util.speak(f"Reminder set for {time_value} {time_unit} to {message}")
             except Exception as e:
@@ -391,8 +408,16 @@ class FamAssistant:
         elif "timer" in processed_tokens:
             try:
                 time_value, time_unit = self.command_processor.extract_time(processed_tokens)
-                seconds = time_value * 60 if time_unit == "minutes" else time_value
-                self.task_manager.set_timer(seconds)
+                if time_unit == "minutes":
+                    seconds = time_value * 60
+                elif time_unit == "hours":
+                    seconds = time_value * 3600
+                elif time_unit == "seconds":
+                    seconds = time_value
+                else:
+                    raise ValueError("Unsupported time unit")
+                
+                self.task_manager.set_timer(float(seconds))
                 self.util.speak(f"Timer set for {time_value} {time_unit}.")
             except Exception as e:
                 logging.error(f"Error setting timer: {e}")
@@ -412,7 +437,7 @@ class FamAssistant:
             except Exception as e:
                 logging.error(f"Error setting alarm: {e}")
                 self.util.speak("Sorry, I couldn't set the alarm.")
-
+                
     def repSpeak(self, file):
         subprocess.run(['ffplay', '-nodisp', '-autoexit', file], check=True)
 
