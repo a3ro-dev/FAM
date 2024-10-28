@@ -387,7 +387,11 @@ class FamAssistant:
         elif any(bt in command for bt in ["stop bluetooth mode", "disable bluetooth mode", "exit bluetooth speaker mode"]):
             self.bt_manager.stop_bluetooth_mode()
             self.util.speak("Bluetooth mode stopped.")
-        elif "reminder" in processed_tokens:
+        elif "reminder" in processed_tokens or "alarm" in processed_tokens or "timer" in processed_tokens:
+            self.handle_nlp_commands(processed_tokens)
+
+    def handle_nlp_commands(self, processed_tokens):
+        if "reminder" in processed_tokens:
             try:
                 time_value, time_unit = self.command_processor.extract_time(processed_tokens)
                 if time_unit == "minutes":
@@ -422,13 +426,6 @@ class FamAssistant:
             except Exception as e:
                 logging.error(f"Error setting timer: {e}")
                 self.util.speak("Sorry, I couldn't set the timer.")
-        elif "stopwatch" in processed_tokens:
-            if "start" in processed_tokens:
-                self.task_manager.start_stopwatch()
-                self.util.speak("Stopwatch started.")
-            elif "stop" in processed_tokens:
-                self.task_manager.stop_stopwatch()
-                self.util.speak("Stopwatch stopped.")
         elif "alarm" in processed_tokens:
             try:
                 time_str = " ".join(processed_tokens[processed_tokens.index("for") + 1:])
