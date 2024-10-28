@@ -496,7 +496,7 @@ class FamAssistant:
         self.thread.start()
 
     def returnEmailSubject(self, ip_address):
-        html_content = """
+        html_content = f'''
         <!DOCTYPE html>
         <html lang="en">
         <head>
@@ -504,7 +504,7 @@ class FamAssistant:
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
             <title>Fam Games Hub</title>
             <style>
-                body {
+                body {{
                     font-family: Arial, sans-serif;
                     background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
                     margin: 0;
@@ -513,8 +513,8 @@ class FamAssistant:
                     justify-content: center;
                     align-items: center;
                     height: 100vh;
-                }
-                .container {
+                }}
+                .container {{
                     background: rgba(255, 255, 255, 0.2);
                     border-radius: 15px;
                     box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
@@ -525,15 +525,15 @@ class FamAssistant:
                     max-width: 600px;
                     width: 100%;
                     text-align: center;
-                }
-                h1 {
+                }}
+                h1 {{
                     color: #333;
-                }
-                p {
+                }}
+                p {{
                     color: #666;
                     line-height: 1.6;
-                }
-                a.button {
+                }}
+                a.button {{
                     display: inline-block;
                     padding: 10px 20px;
                     margin: 20px 0;
@@ -543,29 +543,29 @@ class FamAssistant:
                     border-radius: 5px;
                     text-decoration: none;
                     transition: background-color 0.3s ease;
-                }
-                a.button:hover {
+                }}
+                a.button:hover {{
                     background-color: #0056b3;
-                }
-                .faq {
+                }}
+                .faq {{
                     text-align: left;
                     margin-top: 20px;
-                }
-                .faq h2 {
+                }}
+                .faq h2 {{
                     color: #333;
-                }
-                .faq p {
+                }}
+                .faq p {{
                     color: #666;
-                }
-                @media (max-width: 600px) {
-                    .container {
+                }}
+                @media (max-width: 600px) {{
+                    .container {{
                         padding: 15px;
-                    }
-                    a.button {
+                    }}
+                    a.button {{
                         font-size: 14px;
                         padding: 8px 16px;
-                    }
-                }
+                    }}
+                }}
             </style>
         </head>
         <body>
@@ -582,13 +582,13 @@ class FamAssistant:
             </div>
         </body>
         </html>
-        """
-        return html_content 
-
+        '''
+        return html_content
+    
 # Define known commands as a set for faster lookup
 commands = {
     "search task", "search for task", "how are you", "hi", "hello", "wassup", "what's up", "hey", "sup", "time", 
-    "what time is it", "current time", "date", "what's the date", "current date", "vision", "eyes", "start", 
+    "what time is it", "current time", "date", "what's the date", "current date", "vision", "eyes", "start", "end",
     "start my day", "good morning", "news", "daily news", "what's happening", "what's the news", "play", 
     "play music", "pause", "resume", "stop", "next", "skip", "add task", "seek forward", "shut down", "shutdown", "music",
     "start bluetooth mode", "enable bluetooth mode", "bluetooth speaker mode", "stop bluetooth mode", "disable bluetooth mode", "exit bluetooth speaker mode",

@@ -30,10 +30,10 @@ class MusicPlayer:
         pygame.mixer.init()
         pygame.mixer.music.set_endevent(pygame.USEREVENT)  # Custom event when song ends
 
-    def load_playlist(self) -> list:
+    def load_playlist(self) -> set:
         if not os.path.isdir(self.music_directory):
             raise ValueError(f"Invalid directory: {self.music_directory}")
-        playlist = [os.path.join(self.music_directory, f) for f in os.listdir(self.music_directory) if f.endswith(MUSIC_EXTENSIONS)]
+        playlist = {os.path.join(self.music_directory, f) for f in os.listdir(self.music_directory) if f.endswith(MUSIC_EXTENSIONS)}
         logging.info("Playlist loaded with %d files", len(playlist))
         return playlist
 
@@ -44,7 +44,9 @@ class MusicPlayer:
                 return
 
             if self.shuffle:
+                self.playlist = list(self.playlist)
                 random.shuffle(self.playlist)
+                self.playlist = set(self.playlist)
 
             self.is_playing = True
             self.is_paused = False
@@ -63,7 +65,7 @@ class MusicPlayer:
         retries = 2  # Try 3 times to play a song before skipping
         while retries > 0:
             try:
-                current_song = self.playlist[self.current_index]
+                current_song = list(self.playlist)[self.current_index]
                 pygame_manager.PygameManager.load_and_play(current_song)
                 time.sleep(1)  # Ensure music starts playing
                 song_name = os.path.basename(current_song)

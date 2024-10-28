@@ -24,10 +24,12 @@ class Node:
 
 class DoublyLinkedList:
     """
-    Represents a doubly-linked list.
-    
-    Attributes:
-    - head (Node): A reference to the first node in the list.
+    Methods:
+    - __init__(): Initializes a new empty doubly-linked list.
+    - insert_at_start(data: str): Inserts a new node with the given data at the beginning of the list.
+    - to_list() -> list: Builds and returns a list representing the contents of the list from head to tail.
+    - insert_at_end(data: str): Inserts a new node with the given data at the end of the list.
+    - search(key: str) -> bool: Searches for a node with the given key in the list.
     """
     
     def __init__(self):

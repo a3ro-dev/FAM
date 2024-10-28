@@ -31,6 +31,10 @@ class Games:
     def play_game(self):
         try:
             logging.info("Attempting to start the game server...")
+            if not os.path.exists(self.dir):
+                logging.error("Directory does not exist: %s", self.dir)
+                return
+
             self.process = subprocess.Popen(
                 ['python3', '-m', 'http.server', '8080'],
                 cwd=self.dir,

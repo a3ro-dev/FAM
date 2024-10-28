@@ -6,6 +6,41 @@ import subprocess
 import logging
 
 class TaskManager:
+    """
+    TaskManager class for managing tasks, reminders, timers, stopwatches, and alarms.
+    Attributes:
+        tasks (dll.DoublyLinkedList): A doubly linked list to store tasks.
+        reminders (list): A list to store reminders as tuples of (datetime, message).
+        timers (list): A list to store active timers.
+        stopwatch_start_time (datetime): The start time of the stopwatch.
+        alarms (list): A list to store alarm times.
+        last_reset_time (datetime): The last time the task list was reset.
+    Methods:
+        check_and_reset_if_needed() -> None:
+            Checks if the task list needs to be reset based on a 24-hour interval and resets if needed.
+        add_task_at_start(task_name: str) -> None:
+            Adds a task to the start of the task list after checking and resetting if needed.
+        search_task(task_name: str) -> bool:
+            Searches for a task in the task list after checking and resetting if needed.
+        display_tasks() -> list:
+            Returns a list of all tasks after checking and resetting if needed.
+        set_reminder(time_str: str, message: str) -> None:
+            Sets a reminder for a specific time and starts a thread to check reminders.
+        check_reminders() -> None:
+            Continuously checks for reminders and logs them when the time is reached.
+        set_timer(seconds: float) -> None:
+            Sets a timer for a specified number of seconds and starts a thread to handle it.
+        start_stopwatch() -> None:
+            Starts the stopwatch.
+        stop_stopwatch() -> None:
+            Stops the stopwatch and logs the elapsed time.
+        set_alarm(time_str: str) -> None:
+            Sets an alarm for a specific time and starts a thread to check alarms.
+        check_alarms() -> None:
+            Continuously checks for alarms and logs them when the time is reached.
+    Note:
+        This class is still being tested and is in the early stages of development.
+    """
     def __init__(self):
         self.tasks = dll.DoublyLinkedList()
         self.reminders = []
