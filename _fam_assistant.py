@@ -304,7 +304,7 @@ class FamAssistant:
             return
     
         if self.music_player.is_playing and "stop" not in command.lower() and not {"song", "music"} & set(command.lower().split()): # type: ignore
-            self.util.speak("Please stop the music player first by saying 'stop music'.")
+            logging.error("Please stop the music player first by saying 'stop music'.")
         else:
             self.process_command(command)
     

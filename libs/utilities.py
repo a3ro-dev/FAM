@@ -86,19 +86,22 @@ class Utilities:
             logging.error(f"Error in playChime: {e}")
 
     def speak(self, text: str):
-        try:
-            logging.debug(f"Generating speech for text: {text}")
-            response = openai.audio.speech.create(
-                model="tts-1",
-                voice="shimmer",
-                input=text,
-            )
-            save_file_path = f"/home/pi/FAM/assets/cache/{uuid.uuid4()}.mp3"
-            response.stream_to_file(save_file_path)
-            logging.info(f"{save_file_path}: A new audio file was saved successfully!")
-            subprocess.run(['ffplay', '-nodisp', '-autoexit', save_file_path], check=True)
-        except Exception as e:
-            logging.error(f"Error in speak: {e}")
+        if text.strip():  # Check if the text is not empty or whitespace
+            try:
+                logging.debug(f"Generating speech for text: {text}")
+                response = openai.audio.speech.create(
+                    model="tts-1",
+                    voice="shimmer",
+                    input=text,
+                )
+                save_file_path = f"/home/pi/FAM/assets/cache/{uuid.uuid4()}.mp3"
+                response.stream_to_file(save_file_path)
+                logging.info(f"{save_file_path}: A new audio file was saved successfully!")
+                subprocess.run(['ffplay', '-nodisp', '-autoexit', save_file_path], check=True)
+            except Exception as e:
+                logging.error(f"Error in speak: {e}")
+        else:
+            logging.error("Text to be spoken is empty or whitespace.")
 
     def getSpeech(self):
         if not shutil.which("flac"):
@@ -144,7 +147,7 @@ class Utilities:
             return current_date
         except Exception as e:
             logging.error(f"Error in getDate: {e}")
-            return None
+            return ''
     
     def getWeather(self, city: str, api_key=weatherAPI) -> str:
         url = f"http://api.openweathermap.org/data/2.5/weather?q={city},in&appid={api_key}"
