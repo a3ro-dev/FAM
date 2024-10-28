@@ -18,10 +18,10 @@ import numpy as np
 import logging
 import RPi.GPIO as GPIO
 import time
-import nltk
-from nltk.tokenize import word_tokenize
-from nltk.corpus import wordnet
-from nltk.stem import WordNetLemmatizer
+# import nltk
+# from nltk.tokenize import word_tokenize
+# from nltk.corpus import wordnet
+# from nltk.stem import WordNetLemmatizer
 from collections import deque
 
 # Initialize logging
@@ -42,78 +42,78 @@ def get_ip_address():
     return ip_address
 
 
-class CommandProcessor:
-    def __init__(self):
-        self.lemmatizer = WordNetLemmatizer()
+# class CommandProcessor:
+#     def __init__(self):
+#         self.lemmatizer = WordNetLemmatizer()
 
-    def get_wordnet_pos(self, word):
-        """Map POS tag to first character lemmatize() accepts."""
-        tag = nltk.pos_tag([word])[0][1][0].upper()
-        tag_dict = {"J": wordnet.ADJ, "N": wordnet.NOUN, "V": wordnet.VERB, "R": wordnet.ADV}
-        return tag_dict.get(tag, wordnet.NOUN)
+#     def get_wordnet_pos(self, word):
+#         """Map POS tag to first character lemmatize() accepts."""
+#         tag = nltk.pos_tag([word])[0][1][0].upper()
+#         tag_dict = {"J": wordnet.ADJ, "N": wordnet.NOUN, "V": wordnet.VERB, "R": wordnet.ADV}
+#         return tag_dict.get(tag, wordnet.NOUN)
 
-    def preprocess_command(self, command):
-        """Preprocess the command text: tokenize, lemmatize, and return cleaned words."""
-        tokens = word_tokenize(command.lower())  # Tokenize and lowercase the input
-        lemmatized_tokens = [self.lemmatizer.lemmatize(token, self.get_wordnet_pos(token)) for token in tokens]
-        return lemmatized_tokens
+#     def preprocess_command(self, command):
+#         """Preprocess the command text: tokenize, lemmatize, and return cleaned words."""
+#         tokens = word_tokenize(command.lower())  # Tokenize and lowercase the input
+#         lemmatized_tokens = [self.lemmatizer.lemmatize(token, self.get_wordnet_pos(token)) for token in tokens]
+#         return lemmatized_tokens
 
-    def extract_time(self, tokens):
-        """Extract time information from tokens."""
-        time_units = {"minute": "minutes", "hour": "hours", "second": "seconds"}
-        number_words = {
-            "zero": 0, "one": 1, "two": 2, "three": 3, "four": 4, "five": 5, "six": 6, "seven": 7, "eight": 8, "nine": 9,
-            "ten": 10, "eleven": 11, "twelve": 12, "thirteen": 13, "fourteen": 14, "fifteen": 15, "sixteen": 16,
-            "seventeen": 17, "eighteen": 18, "nineteen": 19, "twenty": 20, "thirty": 30, "forty": 40, "fifty": 50,
-            "sixty": 60,
-        }
-        time_value = 0
-        time_unit = "seconds"
-        time_str = ""
-        am_pm = ""
-        i = 0
-        while i < len(tokens):
-            token = tokens[i]
-            if token.isdigit():
-                time_str += token
-            elif token in number_words:
-                time_str += str(number_words[token])
-            elif token == "half":
-                time_str += ".5"
-            elif token in ["am", "pm"]:
-                am_pm = token
-            elif token in time_units.values():
-                time_unit = token
-                break
-            i += 1
+#     def extract_time(self, tokens):
+#         """Extract time information from tokens."""
+#         time_units = {"minute": "minutes", "hour": "hours", "second": "seconds"}
+#         number_words = {
+#             "zero": 0, "one": 1, "two": 2, "three": 3, "four": 4, "five": 5, "six": 6, "seven": 7, "eight": 8, "nine": 9,
+#             "ten": 10, "eleven": 11, "twelve": 12, "thirteen": 13, "fourteen": 14, "fifteen": 15, "sixteen": 16,
+#             "seventeen": 17, "eighteen": 18, "nineteen": 19, "twenty": 20, "thirty": 30, "forty": 40, "fifty": 50,
+#             "sixty": 60,
+#         }
+#         time_value = 0
+#         time_unit = "seconds"
+#         time_str = ""
+#         am_pm = ""
+#         i = 0
+#         while i < len(tokens):
+#             token = tokens[i]
+#             if token.isdigit():
+#                 time_str += token
+#             elif token in number_words:
+#                 time_str += str(number_words[token])
+#             elif token == "half":
+#                 time_str += ".5"
+#             elif token in ["am", "pm"]:
+#                 am_pm = token
+#             elif token in time_units.values():
+#                 time_unit = token
+#                 break
+#             i += 1
 
-        # Convert time_str to a datetime object if it's in the format of HHMM or HMM
-        if len(time_str) in [3, 4]:
-            try:
-                time_format = "%I%M %p" if am_pm else "%H%M"
-                time_value = datetime.strptime(time_str + " " + am_pm, time_format).time()
-            except ValueError:
-                pass
+#         # Convert time_str to a datetime object if it's in the format of HHMM or HMM
+#         if len(time_str) in [3, 4]:
+#             try:
+#                 time_format = "%I%M %p" if am_pm else "%H%M"
+#                 time_value = datetime.strptime(time_str + " " + am_pm, time_format).time()
+#             except ValueError:
+#                 pass
 
-        return time_value, time_unit
+#         return time_value, time_unit
 
-    def command_matches(self, command_tokens, command_set):
-        """Check if command tokens match any of the known commands using synonym matching."""
-        for token in command_tokens:
-            for known_command in command_set:
-                if token in known_command:
-                    return True
-        return False
+#     def command_matches(self, command_tokens, command_set):
+#         """Check if command tokens match any of the known commands using synonym matching."""
+#         for token in command_tokens:
+#             for known_command in command_set:
+#                 if token in known_command:
+#                     return True
+#         return False
 
-    def process_command(self, command, commands):
-        """Process the input command."""
-        command_tokens = self.preprocess_command(command)
+#     def process_command(self, command, commands):
+#         """Process the input command."""
+#         command_tokens = self.preprocess_command(command)
         
-        # Matching command tokens with known commands
-        if self.command_matches(command_tokens, commands):
-            return "Known command detected!"
-        else:
-            return "Unknown command. Let me try searching online!"
+#         # Matching command tokens with known commands
+#         if self.command_matches(command_tokens, commands):
+#             return "Known command detected!"
+#         else:
+#             return "Unknown command. Let me try searching online!"
         
 class GestureModule:
     def __init__(self, trigger_pin=18, echo_pin=24, distance_range=(2, 5), gesture_interval=0.2, debounce_time=1.0):
@@ -221,7 +221,7 @@ class FamAssistant:
         self.gpt = gpt.Generation()
         self.gesture_module = GestureModule()
         self.bt_manager = btm.BluetoothManager()
-        self.command_processor = CommandProcessor()
+        # self.command_processor = CommandProcessor()
 
         logging.info("FamAssistant initialized.")
 
@@ -311,21 +311,31 @@ class FamAssistant:
     
         self.init_audio_stream()
 
-    def process_command(self, command):
-        """Process the command using NLTK-based tokenization and command matching."""
-        logging.debug(f"Processing command: {command}")
+    # def process_command(self, command):
+    #     """Process the command using NLTK-based tokenization and command matching."""
+    #     logging.debug(f"Processing command: {command}")
         
-        # Preprocess the command and detect known commands
-        processed_tokens = self.command_processor.preprocess_command(command)
+    #     # Preprocess the command and detect known commands
+    #     processed_tokens = self.command_processor.preprocess_command(command)
 
-        # Match against known commands
-        if self.command_processor.command_matches(processed_tokens, commands):
+    #     # Match against known commands
+    #     if self.command_processor.command_matches(processed_tokens, commands):
+    #         self.handle_known_commands(command)
+    #     else:
+    #         self.handle_unknown_command(command)
+
+    def process_command(self, command):
+        """Process the command after detecting the wake word."""
+        logging.debug(f"Processing command: {command}")
+        command_words = set(command.lower().split())
+    
+        if command_words & commands:
             self.handle_known_commands(command)
         else:
             self.handle_unknown_command(command)
 
     def handle_known_commands(self, command):
-        processed_tokens = self.command_processor.preprocess_command(command)
+        # processed_tokens = self.command_processor.preprocess_command(command)
         if any(greet in command for greet in ["hi", "hello", "wassup", "what's up", "hey", "sup"]):
             self.repSpeak('/home/pi/FAM/tts_audio_files/Hello__How_can_I_help_you_today_.mp3')
         elif "how are you" in command:
@@ -387,56 +397,56 @@ class FamAssistant:
         elif any(bt in command for bt in ["stop bluetooth mode", "disable bluetooth mode", "exit bluetooth speaker mode"]):
             self.bt_manager.stop_bluetooth_mode()
             self.util.speak("Bluetooth mode stopped.")
-        elif "reminder" in processed_tokens:
-            try:
-                time_value, time_unit = self.command_processor.extract_time(processed_tokens)
-                if time_unit == "minutes":
-                    reminder_time = datetime.now() + timedelta(minutes=time_value)
-                elif time_unit == "hours":
-                    reminder_time = datetime.now() + timedelta(hours=time_value)
-                elif time_unit == "seconds":
-                    reminder_time = datetime.now() + timedelta(seconds=time_value)
-                else:
-                    raise ValueError("Unsupported time unit")
+        # elif "reminder" in processed_tokens:
+        #     try:
+        #         time_value, time_unit = self.command_processor.extract_time(processed_tokens)
+        #         if time_unit == "minutes":
+        #             reminder_time = datetime.now() + timedelta(minutes=time_value)
+        #         elif time_unit == "hours":
+        #             reminder_time = datetime.now() + timedelta(hours=time_value)
+        #         elif time_unit == "seconds":
+        #             reminder_time = datetime.now() + timedelta(seconds=time_value)
+        #         else:
+        #             raise ValueError("Unsupported time unit")
                 
-                message = " ".join(processed_tokens[processed_tokens.index("to") + 1:]) if "to" in processed_tokens else ""
-                self.task_manager.set_reminder(reminder_time.strftime("%Y-%m-%d %H:%M:%S"), message)
-                self.util.speak(f"Reminder set for {time_value} {time_unit} to {message}")
-            except Exception as e:
-                logging.error(f"Error setting reminder: {e}")
-                self.util.speak("Sorry, I couldn't set the reminder.")
-        elif "timer" in processed_tokens:
-            try:
-                time_value, time_unit = self.command_processor.extract_time(processed_tokens)
-                if time_unit == "minutes":
-                    seconds = time_value * 60
-                elif time_unit == "hours":
-                    seconds = time_value * 3600
-                elif time_unit == "seconds":
-                    seconds = time_value
-                else:
-                    raise ValueError("Unsupported time unit")
+        #         message = " ".join(processed_tokens[processed_tokens.index("to") + 1:]) if "to" in processed_tokens else ""
+        #         self.task_manager.set_reminder(reminder_time.strftime("%Y-%m-%d %H:%M:%S"), message)
+        #         self.util.speak(f"Reminder set for {time_value} {time_unit} to {message}")
+        #     except Exception as e:
+        #         logging.error(f"Error setting reminder: {e}")
+        #         self.util.speak("Sorry, I couldn't set the reminder.")
+        # elif "timer" in processed_tokens:
+        #     try:
+        #         time_value, time_unit = self.command_processor.extract_time(processed_tokens)
+        #         if time_unit == "minutes":
+        #             seconds = time_value * 60
+        #         elif time_unit == "hours":
+        #             seconds = time_value * 3600
+        #         elif time_unit == "seconds":
+        #             seconds = time_value
+        #         else:
+        #             raise ValueError("Unsupported time unit")
                 
-                self.task_manager.set_timer(float(seconds))
-                self.util.speak(f"Timer set for {time_value} {time_unit}.")
-            except Exception as e:
-                logging.error(f"Error setting timer: {e}")
-                self.util.speak("Sorry, I couldn't set the timer.")
-        elif "stopwatch" in processed_tokens:
-            if "start" in processed_tokens:
-                self.task_manager.start_stopwatch()
-                self.util.speak("Stopwatch started.")
-            elif "stop" in processed_tokens:
-                self.task_manager.stop_stopwatch()
-                self.util.speak("Stopwatch stopped.")
-        elif "alarm" in processed_tokens:
-            try:
-                time_str = " ".join(processed_tokens[processed_tokens.index("for") + 1:])
-                self.task_manager.set_alarm(time_str)
-                self.util.speak(f"Alarm set for {time_str}")
-            except Exception as e:
-                logging.error(f"Error setting alarm: {e}")
-                self.util.speak("Sorry, I couldn't set the alarm.")
+        #         self.task_manager.set_timer(float(seconds))
+        #         self.util.speak(f"Timer set for {time_value} {time_unit}.")
+        #     except Exception as e:
+        #         logging.error(f"Error setting timer: {e}")
+        #         self.util.speak("Sorry, I couldn't set the timer.")
+        # elif "stopwatch" in processed_tokens:
+        #     if "start" in processed_tokens:
+        #         self.task_manager.start_stopwatch()
+        #         self.util.speak("Stopwatch started.")
+        #     elif "stop" in processed_tokens:
+        #         self.task_manager.stop_stopwatch()
+        #         self.util.speak("Stopwatch stopped.")
+        # elif "alarm" in processed_tokens:
+        #     try:
+        #         time_str = " ".join(processed_tokens[processed_tokens.index("for") + 1:])
+        #         self.task_manager.set_alarm(time_str)
+        #         self.util.speak(f"Alarm set for {time_str}")
+        #     except Exception as e:
+        #         logging.error(f"Error setting alarm: {e}")
+        #         self.util.speak("Sorry, I couldn't set the alarm.")
                 
     def repSpeak(self, file):
         subprocess.run(['ffplay', '-nodisp', '-autoexit', file], check=True)
