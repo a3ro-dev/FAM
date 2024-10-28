@@ -17,6 +17,7 @@ import libs.games
 import numpy as np
 import logging
 import RPi.GPIO as GPIO
+import concurrent.futures
 import time
 # import nltk
 # from nltk.tokenize import word_tokenize
@@ -213,6 +214,7 @@ class FamAssistant:
         self.audio_stream = None
         self.is_running = False
         self.thread = None
+        self.executor = concurrent.futures.ThreadPoolExecutor(max_workers=3)
         self.games = libs.games.Games(False, '/home/pi/FAM/misc')    
         self.musicSearch = musicSearch.MusicSearch()
         self.music_player = musicP.MusicPlayer(music_path, shuffle=True)
@@ -274,10 +276,10 @@ class FamAssistant:
                     keyword_index = self.porcupine.process(pcm)
                     if keyword_index >= 0:
                         logging.info("Keyword detected.")
-                        self.on_keyword_detected()
+                        self.executor.submit(self.on_keyword_detected)
                 if self.gesture_module.detect_hand_gesture():
                     logging.info("Hand gesture detected.")
-                    self.on_keyword_detected()
+                    self.executor.submit(self.on_keyword_detected)
         except Exception as e:
             logging.error(f"Error in run loop: {e}")
 
@@ -311,26 +313,12 @@ class FamAssistant:
     
         self.init_audio_stream()
 
-    # def process_command(self, command):
-    #     """Process the command using NLTK-based tokenization and command matching."""
-    #     logging.debug(f"Processing command: {command}")
-        
-    #     # Preprocess the command and detect known commands
-    #     processed_tokens = self.command_processor.preprocess_command(command)
-
-    #     # Match against known commands
-    #     if self.command_processor.command_matches(processed_tokens, commands):
-    #         self.handle_known_commands(command)
-    #     else:
-    #         self.handle_unknown_command(command)
-
     def process_command(self, command):
         """Process the command after detecting the wake word."""
         logging.debug(f"Processing command: {command}")
         command_words = set(command.lower().split())
-    
         if command_words & commands:
-            self.handle_known_commands(command)
+            self.handle_known_commands(command.lower())
         else:
             self.handle_unknown_command(command)
 
