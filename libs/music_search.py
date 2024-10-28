@@ -26,6 +26,25 @@ def load_config(path: str) -> dict:
         return yaml.safe_load(file)
 
 class MusicSearch:
+    """
+    A class to search for music locally and on YouTube, download audio, and convert it to MP3 format.
+    Methods
+    -------
+    __init__():
+        Initializes the MusicSearch object with configuration and a thread pool executor.
+    shutdown():
+        Shuts down the thread pool executor.
+    search_local_music(song_name: str) -> Optional[str]:
+        Searches for a song in the local music directory.
+    search_youtube(song_name: str) -> Optional[str]:
+        Searches for a song on YouTube and returns the URL of the first result.
+    download_audio(url: str) -> Optional[str]:
+        Downloads audio from a YouTube URL and saves it to the local music directory.
+    convert_to_mp3(video_path: str) -> Optional[str]:
+        Converts a downloaded video file to MP3 format and removes the original video file.
+    search_and_download_music(song_name: str) -> Optional[str]:
+        Searches for a song locally and on YouTube, downloads it, and converts it to MP3 format.
+    """
     def __init__(self):
         config = load_config(CONFIG_PATH)
         self.output_path = config['main']['music_path']

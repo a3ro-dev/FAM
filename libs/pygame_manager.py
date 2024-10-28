@@ -1,36 +1,58 @@
 import pygame
+import logging
+
+# Configure logging
+logging.basicConfig(level=logging.INFO)
 
 class PygameManager:
+    """
+    PygameManager is a utility class for managing pygame's mixer module. It provides methods to initialize the mixer,
+    load and play music files, stop the music, check if the music is currently playing, and set the volume.
+    Class Methods:
+        initialize(cls):
+            Initializes the pygame mixer if it hasn't been initialized yet. Logs the initialization process.
+        load_and_play(cls, file_path):
+            Loads a music file from the given file path and starts playing it. Initializes the mixer if necessary.
+            Logs the loading and playing process.
+        stop(cls):
+            Stops the currently playing music. Logs the stopping process.
+        is_busy(cls):
+            Checks if the music is currently playing. Logs the busy status and returns a boolean.
+        set_volume(cls, volume):
+            Sets the volume of the music. The volume should be provided as a percentage (0-100).
+            Logs the volume setting process.
+    """
     _initialized = False
 
     @classmethod
     def initialize(cls):
         if not cls._initialized:
-            print("Initializing pygame mixer...")
+            logging.info("Initializing pygame mixer...")
             pygame.mixer.init(buffer=1024)
             cls._initialized = True
-            print("Pygame mixer initialized.")
+            logging.info("Pygame mixer initialized.")
 
     @classmethod
     def load_and_play(cls, file_path):
-        cls.initialize()
-        print(f"Loading and playing file: {file_path}")
+        if not cls._initialized:
+            cls.initialize()
+        logging.info(f"Loading and playing file: {file_path}")
         pygame.mixer.music.load(file_path)
         pygame.mixer.music.play()
-        print("Music started playing.")
+        logging.info("Music started playing.")
 
     @classmethod
     def stop(cls):
-        print("Stopping music.")
+        logging.info("Stopping music.")
         pygame.mixer.music.stop()
 
     @classmethod
     def is_busy(cls):
         busy = pygame.mixer.music.get_busy()
-        print(f"Music is busy: {busy}")
+        logging.info(f"Music is busy: {busy}")
         return busy
 
     @classmethod
     def set_volume(cls, volume):
-        print(f"Setting volume to: {volume}")
+        logging.info(f"Setting volume to: {volume}")
         pygame.mixer.music.set_volume(volume / 100.0)

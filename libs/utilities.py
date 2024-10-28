@@ -39,6 +39,33 @@ Gpt = gpt.Generation()
 openai.api_key = config['main']['openai_api_key']
 
 class Utilities:
+    """
+    Utilities class provides various utility functions such as playing chimes, text-to-speech, speech recognition, 
+    fetching current time and date, weather information, news headlines, and sending emails.
+    Methods:
+        __init__():
+            Initializes the Utilities class with author and audio files.
+        playChime(type: str):
+            Plays a chime sound based on the provided type.
+        speak(text: str):
+            Converts the provided text to speech and plays the audio.
+        getSpeech() -> str:
+            Listens for speech input from the microphone and returns the recognized text.
+        getTime() -> str:
+            Returns the current time as a string.
+        getDate() -> str:
+            Returns the current date in a formatted string.
+        getWeather(city: str, api_key: str) -> str:
+            Fetches and returns the weather information for the specified city.
+        getNews(api_key: str, num_articles: int = 3) -> set:
+            Fetches and returns a set of summarized news articles.
+        get_part_of_day() -> str:
+            Returns the part of the day (morning, afternoon, evening, night) based on the current time.
+        startMyDay(location: str = 'Allahabad'):
+            Provides a summary of the current date, time, weather, and news headlines to start the day.
+        send_email(recipient: str, subject: str, plain_content: str, html_content: str = ""):
+            Sends an email with the specified recipient, subject, plain text content, and optional HTML content.
+    """
     def __init__(self):
         self.author = author    
         self.audio_files = {
@@ -96,77 +123,112 @@ class Utilities:
         current_time = time.ctime()
         logging.info(f"Current time: {current_time}")
         return current_time
-
-    def getDate(self):
-        now = datetime.now()
-        day = now.day
-        suffix = 'th' if 11 <= day <= 13 else {1: 'st', 2: 'nd', 3: 'rd'}.get(day % 10, 'th')
-        current_date = now.strftime(f"%B {day}{suffix}, %Y")
-        logging.info(f"Current date: {current_date}")
-        return current_date
-
     
-    def getWeather(self, city: str, api_key=weatherAPI)-> str:
+    def getDate(self):
+        try:
+            now = datetime.now()
+            day = now.day
+            
+            # Determine the suffix for the day
+            if 11 <= day <= 13:
+                suffix = 'th'
+            else:
+                suffix = {1: 'st', 2: 'nd', 3: 'rd'}.get(day % 10, 'th')
+            
+            # Format the current date
+            current_date = now.strftime(f"%B {day}{suffix}, %Y")
+            
+            # Log the current date
+            logging.info(f"Current date: {current_date}")
+            
+            return current_date
+        except Exception as e:
+            logging.error(f"Error in getDate: {e}")
+            return None
+    
+    def getWeather(self, city: str, api_key=weatherAPI) -> str:
         url = f"http://api.openweathermap.org/data/2.5/weather?q={city},in&appid={api_key}"
         try:
             logging.debug(f"Fetching weather data for city: {city}")
             response = requests.get(url)
             response.raise_for_status()
             data = response.json()
-
+    
+            # Convert temperatures from Kelvin to Celsius
             for key in {"temp", "feels_like", "temp_min", "temp_max"}:
                 data["main"][key] -= 273.15
-
-            finalData = {
-                "weather_condition": data["weather"][0]["main"],
-                "detailed_condition": data["weather"][0]["description"],
-                "temperature": data["main"]["temp"],
-                "feels_like": data["main"]["feels_like"],
-                "temp_min": data["main"]["temp_min"],
-                "temp_max": data["main"]["temp_max"],
-                "pressure": data["main"]["pressure"],
+    
+            # Extract only the necessary information
+            weather_data = {
+                "condition": data["weather"][0]["main"],
+                "description": data["weather"][0]["description"],
+                "temp": round(data["main"]["temp"], 2),
+                "feels_like": round(data["main"]["feels_like"], 2),
+                "temp_min": round(data["main"]["temp_min"], 2),
+                "temp_max": round(data["main"]["temp_max"], 2),
                 "humidity": data["main"]["humidity"],
-                "visibility": data["visibility"],
                 "wind_speed": data["wind"]["speed"],
-                "wind_direction": data["wind"]["deg"],
-                "cloudiness": data["clouds"]["all"],
-                "sunrise": data["sys"]["sunrise"],
-                "sunset": data["sys"]["sunset"],
                 "location": data["name"],
             }
-            logging.debug(f"Weather data: {finalData}")
-            return Gpt.generate_text_response(f"Given the following weather data: {finalData}, generate a concise and informative weather report.")
+    
+            logging.debug(f"Weather data: {weather_data}")
+    
+            # Generate a concise weather report
+            prompt = (
+                f"Weather report for {weather_data['location']}: "
+                f"Condition: {weather_data['condition']} ({weather_data['description']}). "
+                f"Temperature: {weather_data['temp']}°C (feels like {weather_data['feels_like']}°C). "
+                f"Min/Max: {weather_data['temp_min']}°C/{weather_data['temp_max']}°C. "
+                f"Humidity: {weather_data['humidity']}%. "
+                f"Wind speed: {weather_data['wind_speed']} m/s."
+            )
+    
+            return Gpt.generate_text_response(prompt)
         except requests.exceptions.RequestException as e:
             logging.error(f"Error in getWeather: {e}")
-            return ""
+            return "Unable to fetch weather data at the moment."
         except Exception as e:
-            logging.error(f"Error in getWeather: {e}")
-            return "" 
-
+            logging.error(f"Unexpected error in getWeather: {e}")
+            return "An error occurred while processing the weather data."
+    
     @lru_cache(maxsize=32)
-    def getNews(self, api_key=newsAPI, num_articles=5):
+    def getNews(self, api_key=newsAPI, num_articles=3):
         url = f"https://newsapi.org/v2/top-headlines?country=in&apiKey={api_key}"
         try:
             logging.debug("Fetching news data")
             response = requests.get(url)
             response.raise_for_status()
             data = response.json()
-
+    
             logging.debug(f"API Response: {data}")
-
+    
             articles = data.get("articles", [])
             if len(articles) < num_articles:
                 logging.warning(f"Only {len(articles)} articles available, cannot select {num_articles}")
                 return []
-
+    
             selected_articles = random.sample(articles, min(num_articles, len(articles)))
-
+    
             newsSet = set()
             for article in selected_articles:
-                news = Gpt.generate_text_response(f"Summarize the given article in a journalistic style, focusing on the key points and events. Please avoid including any hyperlinks.\n{article}")
+                # Extract necessary information to minimize token usage
+                title = article.get("title", "")
+                description = article.get("description", "")
+                content = article.get("content", "")
+    
+                # Create a concise prompt for the GPT model
+                prompt = (
+                    f"Summarize the following article in a journalistic style, focusing on the key points and events. "
+                    f"Title: {title}\n"
+                    f"Description: {description}\n"
+                    f"Content: {content}\n"
+                    "Please avoid including any hyperlinks."
+                )
+    
+                news = Gpt.generate_text_response(prompt)
                 self.playChime('success')
                 newsSet.add(news)
-
+    
             return newsSet
         except requests.exceptions.RequestException as e:
             self.playChime('error')
@@ -174,44 +236,58 @@ class Utilities:
             return set()
         except Exception as e:
             self.playChime('error')
-            logging.error(f"Error in getNews: {e}")
+            logging.error(f"Unexpected error in getNews: {e}")
             return set()
 
     def get_part_of_day(self):
-        current_hour = datetime.now().hour
-        logging.debug(f"Current hour: {current_hour}")
-
-        if current_hour < 12:
-            return "morning"
-        elif 12 <= current_hour < 17:
-            return "afternoon"
-        elif 17 <= current_hour < 20:
-            return "evening"
-        else:
-            return "night"
+        try:
+            current_hour = datetime.now().hour
+            logging.debug(f"Current hour: {current_hour}")
+    
+            if 0 <= current_hour < 12:
+                return "morning"
+            elif 12 <= current_hour < 17:
+                return "afternoon"
+            elif 17 <= current_hour < 20:
+                return "evening"
+            elif 20 <= current_hour < 24:
+                return "night"
+            else:
+                logging.error(f"Unexpected hour value: {current_hour}")
+                return "unknown"
+        except Exception as e:
+            logging.error(f"Error in get_part_of_day: {e}")
+            return "unknown"
 
     def startMyDay(self, location='Allahabad'):
         try:
             part_of_day = self.get_part_of_day()
-            self.speak(f"Good {part_of_day}!")
-            self.speak(f"Today is {self.getDate()}")
-            self.speak(f"The current time is {self.getTime()}")
-    
+            date = self.getDate()
+            time = self.getTime()
+            
+            # Combine greetings, date, and time into a single speech output
+            self.speak(f"Good {part_of_day}! Today is {date}.")
+            
+            # Fetch and speak the weather report
             weather_report = self.getWeather(location)
             if weather_report:
-                self.speak(str(weather_report))
+                self.speak(f"The weather in {location} is as follows: {weather_report}")
             else:
-                self.speak(f"Sorry, I couldn't fetch the weather for {location}")
-    
+                self.speak(f"Sorry, I couldn't fetch the weather for {location}.")
+            
+            # Fetch and speak the news headlines
             news_headlines = self.getNews()
             if news_headlines:
                 self.playChime('success')
+                self.speak("Here are the top news headlines:")
                 for news in news_headlines:
                     self.speak(news)
             else:
                 self.playChime('error')
+                self.speak("Sorry, I couldn't fetch the news headlines.")
         except Exception as e:
             logging.error(f"Error in startMyDay: {e}")
+            self.speak("An error occurred while starting your day.")
 
     def send_email(self, recipient: str, subject: str, plain_content: str, html_content: str = ""):
         sender_email = emailID
