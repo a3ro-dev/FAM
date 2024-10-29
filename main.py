@@ -32,7 +32,7 @@ if __name__ == "__main__":
     porcupine_listener = main()
     try:
         while True:
-            time.sleep(0.5)  # Sleep to reduce CPU usage
+            pass
     except (KeyboardInterrupt, SystemExit):
         porcupine_listener.stop()
         if porcupine_listener.thread is not None:
