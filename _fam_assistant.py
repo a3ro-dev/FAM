@@ -465,5 +465,5 @@ commands = {
     "start my day", "good morning", "news", "daily news", "what's happening", "what's the news", "play", 
     "play music", "pause", "resume", "stop", "next", "skip", "add task", "seek forward", "shut down", "shutdown", "music",
     "start Bluetooth mode", "enable Bluetooth mode", "Bluetooth speaker mode", "stop Bluetooth mode", "disable Bluetooth mode", "exit bluetooth speaker mode",
-    "bluetooth"
+    "bluetooth", "download"
 }
