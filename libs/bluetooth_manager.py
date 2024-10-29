@@ -1,28 +1,10 @@
 import subprocess
 import logging
+import time
 
 class BluetoothManager:
     """
-    A class to manage Bluetooth operations, including starting and stopping Bluetooth mode.
-    Attributes:
-    -----------
-    is_bluetooth_mode_on : bool
-        A flag indicating whether Bluetooth mode is currently on.
-    Methods:
-    --------
-    __init__():
-        Initializes the BluetoothManager with Bluetooth mode off.
-    start_bluetooth_mode():
-        Starts Bluetooth mode by setting Bluetooth agent mode,
-        making the device discoverable and pairable.
-        Logs the status and handles errors if any subprocess calls fail.
-    stop_bluetooth_mode():
-        Stops Bluetooth mode by making the device non-discoverable and non-pairable.
-        Logs the status and handles errors if any subprocess calls fail.
-    connect_paired_device():
-        Connects to the paired Bluetooth device for music only.
-    play_sound(file_path):
-        Plays a sound from the specified file path.
+    Manages Bluetooth operations, including starting and stopping Bluetooth mode.
     """
     def __init__(self):
         self.is_bluetooth_mode_on = False
@@ -32,16 +14,29 @@ class BluetoothManager:
             logging.info("Bluetooth mode is already on.")
             return
 
+        # Ensure Bluetooth service is active
+        self.ensure_bluetooth_service_active()
+
         try:
             # Set Bluetooth agent to NoInputNoOutput mode
             subprocess.run(["bluetoothctl", "agent", "NoInputNoOutput"], check=True)
             # Register the agent
             subprocess.run(["bluetoothctl", "agent", "on"], check=True)
-            # Set the default agent
-            subprocess.run(["bluetoothctl", "default-agent"], check=True)
-            # Make the device discoverable
+            
+            # Retry setting the default agent up to 3 times if it fails
+            for attempt in range(3):
+                result = subprocess.run(["bluetoothctl", "default-agent"], check=False)
+                if result.returncode == 0:
+                    logging.info("Default agent successfully set.")
+                    break
+                logging.warning(f"Attempt {attempt + 1} to set default agent failed.")
+                time.sleep(2)
+            else:
+                logging.error("Failed to set default agent after multiple attempts.")
+                return  # Stop further setup if agent setup fails
+
+            # Make the device discoverable and pairable
             subprocess.run(["bluetoothctl", "discoverable", "on"], check=True)
-            # Make the device pairable
             subprocess.run(["bluetoothctl", "pairable", "on"], check=True)
 
             self.is_bluetooth_mode_on = True
@@ -61,9 +56,8 @@ class BluetoothManager:
             return
 
         try:
-            # Make the device non-discoverable
+            # Make the device non-discoverable and non-pairable
             subprocess.run(["bluetoothctl", "discoverable", "off"], check=True)
-            # Make the device non-pairable
             subprocess.run(["bluetoothctl", "pairable", "off"], check=True)
 
             self.is_bluetooth_mode_on = False
@@ -108,6 +102,14 @@ class BluetoothManager:
             subprocess.run(["ffplay", "-nodisp", "-autoexit", file_path], check=True)
         except subprocess.CalledProcessError as e:
             logging.error(f"Failed to play sound: {e}")
+
+    def ensure_bluetooth_service_active(self):
+        try:
+            # Start Bluetooth service if it's not already active
+            subprocess.run(["sudo", "systemctl", "start", "bluetooth"], check=True)
+            logging.info("Bluetooth service is active.")
+        except subprocess.CalledProcessError:
+            logging.error("Bluetooth service could not be started. Please check your Bluetooth setup.")
 
 # Example usage
 if __name__ == "__main__":
