@@ -35,12 +35,14 @@ class BluetoothManager:
         try:
             # Set Bluetooth agent to NoInputNoOutput mode
             subprocess.run(["bluetoothctl", "agent", "NoInputNoOutput"], check=True)
+            # Register the agent
+            subprocess.run(["bluetoothctl", "agent", "on"], check=True)
+            # Set the default agent
+            subprocess.run(["bluetoothctl", "default-agent"], check=True)
             # Make the device discoverable
             subprocess.run(["bluetoothctl", "discoverable", "on"], check=True)
             # Make the device pairable
             subprocess.run(["bluetoothctl", "pairable", "on"], check=True)
-            # Set the default agent
-            subprocess.run(["bluetoothctl", "default-agent"], check=True)
 
             self.is_bluetooth_mode_on = True
             logging.info("Bluetooth mode started. The device is now discoverable and pairable.")
@@ -49,7 +51,7 @@ class BluetoothManager:
             self.connect_paired_device()
             
             # Play connection sound
-            self.play_sound("/home/pi/FAM//assets/audio/success.mp3")
+            self.play_sound("/home/pi/FAM/assets/audio/success.mp3")
         except subprocess.CalledProcessError as e:
             logging.error(f"Failed to start Bluetooth mode: {e}")
 
@@ -68,7 +70,7 @@ class BluetoothManager:
             logging.info("Bluetooth mode stopped.")
             
             # Play disconnection sound
-            self.play_sound("/home/pi/FAM//assets/audio/load.mp3")
+            self.play_sound("/home/pi/FAM/assets/audio/load.mp3")
         except subprocess.CalledProcessError as e:
             logging.error(f"Failed to stop Bluetooth mode: {e}")
 
