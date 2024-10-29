@@ -146,7 +146,6 @@ class FamAssistant:
         self.gpt = gpt.Generation()
         self.gesture_module = GestureModule()
         self.bt_manager = btm.BluetoothManager()
-        self.is_processing_command = False
         # self.command_processor = CommandProcessor()
 
         logging.info("FamAssistant initialized.")
@@ -201,7 +200,7 @@ class FamAssistant:
                     if keyword_index >= 0:
                         logging.info("Keyword detected.")
                         self.executor.submit(self.on_keyword_detected)
-                if not self.is_processing_command and self.gesture_module.detect_hand_gesture():
+                if self.gesture_module.detect_hand_gesture():
                     logging.info("Hand gesture detected.")
                     self.executor.submit(self.on_keyword_detected)
         except Exception as e:
@@ -209,7 +208,6 @@ class FamAssistant:
 
     def on_keyword_detected(self):
         """Handle the event when a keyword is detected."""
-        self.is_processing_command = True  # Set the flag to indicate command processing
         self.util.playChime('success')
         logging.info("Chime played for keyword detection.")
     
@@ -221,13 +219,11 @@ class FamAssistant:
         try:
             command = self.util.getSpeech()
             if not command:  # Check for empty command
-                self.is_processing_command = False  # Reset the flag
                 return
             logging.debug(f"Recognized command: {command}")
         except Exception as e:
             logging.error(f"Error in speech recognition: {e}")
             self.init_audio_stream()  # Ensure audio stream is reinitialized
-            self.is_processing_command = False  # Reset the flag
             return
     
         if self.music_player.is_playing and "stop" not in command.lower() and not {"song", "music"} & set(command.lower().split()): # type: ignore
@@ -239,8 +235,6 @@ class FamAssistant:
             self.music_player.set_volume(100)
     
         self.init_audio_stream()
-        self.is_processing_command = False  # Reset the flag
-        time.sleep(1)  # Add a delay before re-enabling gesture detection
 
     def process_command(self, command):
         """Process the command after detecting the wake word."""
