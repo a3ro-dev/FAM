@@ -19,6 +19,10 @@ class BluetoothManager:
     stop_bluetooth_mode():
         Stops Bluetooth mode by making the device non-discoverable and non-pairable.
         Logs the status and handles errors if any subprocess calls fail.
+    connect_paired_device():
+        Connects to the paired Bluetooth device for music only.
+    play_sound(file_path):
+        Plays a sound from the specified file path.
     """
     def __init__(self):
         self.is_bluetooth_mode_on = False
@@ -35,9 +39,17 @@ class BluetoothManager:
             subprocess.run(["bluetoothctl", "discoverable", "on"], check=True)
             # Make the device pairable
             subprocess.run(["bluetoothctl", "pairable", "on"], check=True)
+            # Set the default agent
+            subprocess.run(["bluetoothctl", "default-agent"], check=True)
 
             self.is_bluetooth_mode_on = True
             logging.info("Bluetooth mode started. The device is now discoverable and pairable.")
+            
+            # Connect to the paired device
+            self.connect_paired_device()
+            
+            # Play connection sound
+            self.play_sound("/home/pi/FAM//assets/audio/success.mp3")
         except subprocess.CalledProcessError as e:
             logging.error(f"Failed to start Bluetooth mode: {e}")
 
@@ -54,8 +66,46 @@ class BluetoothManager:
 
             self.is_bluetooth_mode_on = False
             logging.info("Bluetooth mode stopped.")
+            
+            # Play disconnection sound
+            self.play_sound("/home/pi/FAM//assets/audio/load.mp3")
         except subprocess.CalledProcessError as e:
             logging.error(f"Failed to stop Bluetooth mode: {e}")
+
+    def connect_paired_device(self):
+        try:
+            # List paired devices
+            result = subprocess.run(["bluetoothctl", "paired-devices"], capture_output=True, text=True, check=True)
+            paired_devices = result.stdout.splitlines()
+            
+            if paired_devices:
+                # Extract the MAC address of the first paired device
+                device_mac = paired_devices[0].split()[1]
+                
+                # Trust the device
+                subprocess.run(["bluetoothctl", "trust", device_mac], check=True)
+                
+                # Attempt to connect to the device
+                connect_attempts = 3
+                for attempt in range(connect_attempts):
+                    try:
+                        subprocess.run(["bluetoothctl", "connect", device_mac], check=True)
+                        logging.info(f"Connected to paired device: {device_mac}")
+                        break
+                    except subprocess.CalledProcessError as e:
+                        logging.error(f"Connection attempt {attempt + 1} failed: {e}")
+                        if attempt == connect_attempts - 1:
+                            logging.error("All connection attempts failed.")
+            else:
+                logging.warning("No paired devices found.")
+        except subprocess.CalledProcessError as e:
+            logging.error(f"Failed to connect to paired device: {e}")
+
+    def play_sound(self, file_path):
+        try:
+            subprocess.run(["ffplay", "-nodisp", "-autoexit", file_path], check=True)
+        except subprocess.CalledProcessError as e:
+            logging.error(f"Failed to play sound: {e}")
 
 # Example usage
 if __name__ == "__main__":
