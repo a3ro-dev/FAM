@@ -146,6 +146,7 @@ class FamAssistant:
         self.gpt = gpt.Generation()
         self.gesture_module = GestureModule()
         self.bt_manager = btm.BluetoothManager()
+        self.is_processing_command = False
         # self.command_processor = CommandProcessor()
 
         logging.info("FamAssistant initialized.")
