@@ -19,10 +19,6 @@ import logging
 import RPi.GPIO as GPIO
 import concurrent.futures
 import time
-# import nltk
-# from nltk.tokenize import word_tokenize
-# from nltk.corpus import wordnet
-# from nltk.stem import WordNetLemmatizer
 from collections import deque
 
 # Initialize logging
@@ -42,79 +38,6 @@ def get_ip_address():
         s.close()
     return ip_address
 
-
-# class CommandProcessor:
-#     def __init__(self):
-#         self.lemmatizer = WordNetLemmatizer()
-
-#     def get_wordnet_pos(self, word):
-#         """Map POS tag to first character lemmatize() accepts."""
-#         tag = nltk.pos_tag([word])[0][1][0].upper()
-#         tag_dict = {"J": wordnet.ADJ, "N": wordnet.NOUN, "V": wordnet.VERB, "R": wordnet.ADV}
-#         return tag_dict.get(tag, wordnet.NOUN)
-
-#     def preprocess_command(self, command):
-#         """Preprocess the command text: tokenize, lemmatize, and return cleaned words."""
-#         tokens = word_tokenize(command.lower())  # Tokenize and lowercase the input
-#         lemmatized_tokens = [self.lemmatizer.lemmatize(token, self.get_wordnet_pos(token)) for token in tokens]
-#         return lemmatized_tokens
-
-#     def extract_time(self, tokens):
-#         """Extract time information from tokens."""
-#         time_units = {"minute": "minutes", "hour": "hours", "second": "seconds"}
-#         number_words = {
-#             "zero": 0, "one": 1, "two": 2, "three": 3, "four": 4, "five": 5, "six": 6, "seven": 7, "eight": 8, "nine": 9,
-#             "ten": 10, "eleven": 11, "twelve": 12, "thirteen": 13, "fourteen": 14, "fifteen": 15, "sixteen": 16,
-#             "seventeen": 17, "eighteen": 18, "nineteen": 19, "twenty": 20, "thirty": 30, "forty": 40, "fifty": 50,
-#             "sixty": 60,
-#         }
-#         time_value = 0
-#         time_unit = "seconds"
-#         time_str = ""
-#         am_pm = ""
-#         i = 0
-#         while i < len(tokens):
-#             token = tokens[i]
-#             if token.isdigit():
-#                 time_str += token
-#             elif token in number_words:
-#                 time_str += str(number_words[token])
-#             elif token == "half":
-#                 time_str += ".5"
-#             elif token in ["am", "pm"]:
-#                 am_pm = token
-#             elif token in time_units.values():
-#                 time_unit = token
-#                 break
-#             i += 1
-
-#         # Convert time_str to a datetime object if it's in the format of HHMM or HMM
-#         if len(time_str) in [3, 4]:
-#             try:
-#                 time_format = "%I%M %p" if am_pm else "%H%M"
-#                 time_value = datetime.strptime(time_str + " " + am_pm, time_format).time()
-#             except ValueError:
-#                 pass
-
-#         return time_value, time_unit
-
-#     def command_matches(self, command_tokens, command_set):
-#         """Check if command tokens match any of the known commands using synonym matching."""
-#         for token in command_tokens:
-#             for known_command in command_set:
-#                 if token in known_command:
-#                     return True
-#         return False
-
-#     def process_command(self, command, commands):
-#         """Process the input command."""
-#         command_tokens = self.preprocess_command(command)
-        
-#         # Matching command tokens with known commands
-#         if self.command_matches(command_tokens, commands):
-#             return "Known command detected!"
-#         else:
-#             return "Unknown command. Let me try searching online!"
         
 class GestureModule:
     def __init__(self, trigger_pin=18, echo_pin=24, distance_range=(2, 5), gesture_interval=0.2, debounce_time=1.0):
@@ -385,56 +308,6 @@ class FamAssistant:
         elif any(bt in command for bt in ["stop bluetooth mode", "disable bluetooth mode", "exit bluetooth speaker mode"]):
             self.bt_manager.stop_bluetooth_mode()
             self.util.speak("Bluetooth mode stopped.")
-        # elif "reminder" in processed_tokens:
-        #     try:
-        #         time_value, time_unit = self.command_processor.extract_time(processed_tokens)
-        #         if time_unit == "minutes":
-        #             reminder_time = datetime.now() + timedelta(minutes=time_value)
-        #         elif time_unit == "hours":
-        #             reminder_time = datetime.now() + timedelta(hours=time_value)
-        #         elif time_unit == "seconds":
-        #             reminder_time = datetime.now() + timedelta(seconds=time_value)
-        #         else:
-        #             raise ValueError("Unsupported time unit")
-                
-        #         message = " ".join(processed_tokens[processed_tokens.index("to") + 1:]) if "to" in processed_tokens else ""
-        #         self.task_manager.set_reminder(reminder_time.strftime("%Y-%m-%d %H:%M:%S"), message)
-        #         self.util.speak(f"Reminder set for {time_value} {time_unit} to {message}")
-        #     except Exception as e:
-        #         logging.error(f"Error setting reminder: {e}")
-        #         self.util.speak("Sorry, I couldn't set the reminder.")
-        # elif "timer" in processed_tokens:
-        #     try:
-        #         time_value, time_unit = self.command_processor.extract_time(processed_tokens)
-        #         if time_unit == "minutes":
-        #             seconds = time_value * 60
-        #         elif time_unit == "hours":
-        #             seconds = time_value * 3600
-        #         elif time_unit == "seconds":
-        #             seconds = time_value
-        #         else:
-        #             raise ValueError("Unsupported time unit")
-                
-        #         self.task_manager.set_timer(float(seconds))
-        #         self.util.speak(f"Timer set for {time_value} {time_unit}.")
-        #     except Exception as e:
-        #         logging.error(f"Error setting timer: {e}")
-        #         self.util.speak("Sorry, I couldn't set the timer.")
-        # elif "stopwatch" in processed_tokens:
-        #     if "start" in processed_tokens:
-        #         self.task_manager.start_stopwatch()
-        #         self.util.speak("Stopwatch started.")
-        #     elif "stop" in processed_tokens:
-        #         self.task_manager.stop_stopwatch()
-        #         self.util.speak("Stopwatch stopped.")
-        # elif "alarm" in processed_tokens:
-        #     try:
-        #         time_str = " ".join(processed_tokens[processed_tokens.index("for") + 1:])
-        #         self.task_manager.set_alarm(time_str)
-        #         self.util.speak(f"Alarm set for {time_str}")
-        #     except Exception as e:
-        #         logging.error(f"Error setting alarm: {e}")
-        #         self.util.speak("Sorry, I couldn't set the alarm.")
                 
     def repSpeak(self, file):
         subprocess.run(['ffplay', '-nodisp', '-autoexit', file], check=True)
@@ -588,9 +461,9 @@ class FamAssistant:
 # Define known commands as a set for faster lookup
 commands = {
     "search task", "search for task", "how are you", "hi", "hello", "wassup", "what's up", "hey", "sup", "time", 
-    "what time is it", "current time", "date", "what's the date", "current date", "vision", "eyes", "start", "end",
+    "what time is it", "current time", "date", "what's the date", "current date", "start", "end",
     "start my day", "good morning", "news", "daily news", "what's happening", "what's the news", "play", 
     "play music", "pause", "resume", "stop", "next", "skip", "add task", "seek forward", "shut down", "shutdown", "music",
-    "start bluetooth mode", "enable bluetooth mode", "bluetooth speaker mode", "stop bluetooth mode", "disable bluetooth mode", "exit bluetooth speaker mode",
-    "set reminder", "set timer", "start stopwatch", "stop stopwatch", "set alarm"
+    "start Bluetooth mode", "enable Bluetooth mode", "Bluetooth speaker mode", "stop Bluetooth mode", "disable Bluetooth mode", "exit bluetooth speaker mode",
+    "bluetooth"
 }

@@ -274,7 +274,7 @@ class Utilities:
             # Fetch and speak the weather report
             weather_report = self.getWeather(location)
             if weather_report:
-                self.speak(f"The weather in {location} is as follows: {weather_report}")
+                self.speak(f"{weather_report}")
             else:
                 self.speak(f"Sorry, I couldn't fetch the weather for {location}.")
             
