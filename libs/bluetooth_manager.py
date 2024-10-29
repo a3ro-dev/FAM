@@ -13,11 +13,11 @@ class BluetoothManager:
     __init__():
         Initializes the BluetoothManager with Bluetooth mode off.
     start_bluetooth_mode():
-        Starts Bluetooth mode by initializing PulseAudio, setting Bluetooth agent mode,
-        making the device discoverable and pairable, and setting the default audio sink to Bluetooth.
+        Starts Bluetooth mode by setting Bluetooth agent mode,
+        making the device discoverable and pairable.
         Logs the status and handles errors if any subprocess calls fail.
     stop_bluetooth_mode():
-        Stops Bluetooth mode by unloading Bluetooth modules and stopping PulseAudio.
+        Stops Bluetooth mode by making the device non-discoverable and non-pairable.
         Logs the status and handles errors if any subprocess calls fail.
     """
     def __init__(self):
@@ -29,20 +29,15 @@ class BluetoothManager:
             return
 
         try:
-            # Start PulseAudio
-            subprocess.run(["pulseaudio", "--start"], check=True)
             # Set Bluetooth agent to NoInputNoOutput mode
             subprocess.run(["bluetoothctl", "agent", "NoInputNoOutput"], check=True)
             # Make the device discoverable
             subprocess.run(["bluetoothctl", "discoverable", "on"], check=True)
             # Make the device pairable
             subprocess.run(["bluetoothctl", "pairable", "on"], check=True)
-            # Set the default audio sink to Bluetooth
-            subprocess.run(["pactl", "load-module", "module-bluetooth-discover"], check=True)
-            subprocess.run(["pactl", "load-module", "module-bluetooth-policy"], check=True)
 
             self.is_bluetooth_mode_on = True
-            logging.info("Bluetooth mode started. The device is now acting as a Bluetooth speaker.")
+            logging.info("Bluetooth mode started. The device is now discoverable and pairable.")
         except subprocess.CalledProcessError as e:
             logging.error(f"Failed to start Bluetooth mode: {e}")
 
@@ -52,11 +47,10 @@ class BluetoothManager:
             return
 
         try:
-            # Unload Bluetooth modules
-            subprocess.run(["pactl", "unload-module", "module-bluetooth-discover"], check=True)
-            subprocess.run(["pactl", "unload-module", "module-bluetooth-policy"], check=True)
-            # Stop PulseAudio
-            subprocess.run(["pulseaudio", "--kill"], check=True)
+            # Make the device non-discoverable
+            subprocess.run(["bluetoothctl", "discoverable", "off"], check=True)
+            # Make the device non-pairable
+            subprocess.run(["bluetoothctl", "pairable", "off"], check=True)
 
             self.is_bluetooth_mode_on = False
             logging.info("Bluetooth mode stopped.")
