@@ -1,44 +1,43 @@
-from datetime import datetime, timedelta
 import pyaudio
 import pvporcupine
 import threading
 import struct
-import difflib
 import sys
-import libs.utilities as Utilities
-import libs.gpt as gpt
-import libs.music as musicP
-import libs.music_search as musicSearch
-import libs.clock as clock
-import libs.bluetooth_manager as btm
 import subprocess
 import socket
-import libs.games
 import numpy as np
 import logging
 import RPi.GPIO as GPIO
 import concurrent.futures
 import time
 from collections import deque
+import difflib
+
+# Import custom modules
+import libs.utilities as Utilities
+import libs.gpt as gpt
+import libs.music as musicP
+import libs.music_search as musicSearch
+import libs.clock as clock
+import libs.bluetooth_manager as btm
+import libs.games
 
 # Initialize logging
-logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 def get_ip_address():
     """Get the IP address of the machine."""
     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     try:
-        # Attempt to connect to a non-existent IP to determine local IP.
-        s.connect(('10.254.254.254', 1))
+        s.connect(('10.254.254.254', 1))  # Dummy IP
         ip_address = s.getsockname()[0]
-    except Exception:
-        logging.error("Failed to get IP address. Using 127.0.0.1 as default.")
+    except Exception as e:
+        logging.error(f"Failed to get IP address: {e}")
         ip_address = '127.0.0.1'
     finally:
         s.close()
     return ip_address
 
-        
 class GestureModule:
     def __init__(self, trigger_pin=18, echo_pin=24, distance_range=(2, 5), gesture_interval=0.2, debounce_time=1.0):
         self.trigger_pin = trigger_pin
@@ -46,43 +45,35 @@ class GestureModule:
         self.distance_range = distance_range
         self.gesture_interval = gesture_interval
         self.debounce_time = debounce_time
-        self.distance_history = deque(maxlen=3)  # Shorter moving average window
+        self.distance_history = deque(maxlen=3)
         self.setup_gpio()
 
     def setup_gpio(self):
         GPIO.setmode(GPIO.BCM)
         GPIO.setup(self.trigger_pin, GPIO.OUT)
         GPIO.setup(self.echo_pin, GPIO.IN)
-        GPIO.output(self.trigger_pin, False)  # Ensure trigger pin is off
+        GPIO.output(self.trigger_pin, False)
 
     def cleanup_gpio(self):
         GPIO.cleanup()
 
     def measure_distance(self):
         try:
-            # Trigger the sensor
             GPIO.output(self.trigger_pin, True)
             time.sleep(0.00001)
             GPIO.output(self.trigger_pin, False)
 
             start_time = time.time()
-            stop_time = time.time()
+            timeout = start_time + 0.02  # 20 ms timeout
 
-            # Capture pulse start
-            while GPIO.input(self.echo_pin) == 0:
+            while GPIO.input(self.echo_pin) == 0 and time.time() < timeout:
                 start_time = time.time()
-                if time.time() - start_time > 0.02:  # Timeout if sensor takes too long
-                    return None
 
-            # Capture pulse end
-            while GPIO.input(self.echo_pin) == 1:
+            while GPIO.input(self.echo_pin) == 1 and time.time() < timeout:
                 stop_time = time.time()
-                if stop_time - start_time > 0.02:  # Timeout if sensor takes too long
-                    return None
 
-            # Calculate distance (Time * Speed of Sound / 2)
             time_elapsed = stop_time - start_time
-            distance = (time_elapsed * 34300) / 2  # Distance in cm
+            distance = (time_elapsed * 34300) / 2
 
             return distance
         except Exception as e:
@@ -93,11 +84,11 @@ class GestureModule:
         distance = self.measure_distance()
         if distance is not None:
             self.distance_history.append(distance)
-            return np.mean(self.distance_history)  # Moving average smoothing
+            return np.mean(self.distance_history)
         return None
 
     def detect_hand_gesture(self):
-        logging.info("Starting hand gesture detection...")
+        logging.debug("Starting hand gesture detection...")
         last_gesture_time = time.time()
 
         while True:
@@ -113,7 +104,7 @@ class GestureModule:
                 continue
 
             if self.distance_range[0] <= current_distance <= self.distance_range[1]:
-                logging.info("Hand Gesture Detected")
+                logging.info("Hand gesture detected.")
                 last_gesture_time = current_time
                 return True
 
@@ -129,208 +120,295 @@ class GestureModule:
 
 class FamAssistant:
     def __init__(self, access_key, keyword_path, music_path):
-        """Initialize the assistant with keyword detection, music player, utilities, etc."""
         self.access_key = access_key
         self.keyword_path = keyword_path
         self.music_path = music_path
         self.porcupine = None
         self.audio_stream = None
         self.is_running = False
-        self.thread = None
+        self.is_processing_command = False
         self.executor = concurrent.futures.ThreadPoolExecutor(max_workers=3)
-        self.games = libs.games.Games(False, '/home/pi/FAM/misc')    
-        self.musicSearch = musicSearch.MusicSearch()
+        self.games = libs.games.Games(False, '/home/pi/FAM/misc')
+        self.music_search = musicSearch.MusicSearch()
         self.music_player = musicP.MusicPlayer(music_path, shuffle=True)
         self.task_manager = clock.TaskManager()
         self.util = Utilities.Utilities()
         self.gpt = gpt.Generation()
         self.gesture_module = GestureModule()
         self.bt_manager = btm.BluetoothManager()
-        # self.command_processor = CommandProcessor()
 
+        # Initialize Porcupine and audio stream
+        self.init_porcupine()
+        self.init_audio_stream()
         logging.info("FamAssistant initialized.")
 
+        # Command mappings
+        self.command_mappings = [
+            ("start bluetooth mode", self.handle_start_bluetooth_mode),
+            ("enable bluetooth mode", self.handle_start_bluetooth_mode),
+            ("bluetooth speaker mode", self.handle_start_bluetooth_mode),
+            ("stop bluetooth mode", self.handle_stop_bluetooth_mode),
+            ("disable bluetooth mode", self.handle_stop_bluetooth_mode),
+            ("exit bluetooth speaker mode", self.handle_stop_bluetooth_mode),
+            ("start my day", self.handle_start_my_day),
+            ("good morning", self.handle_start_my_day),
+            ("what time is it", self.handle_time),
+            ("current time", self.handle_time),
+            ("what's the date", self.handle_date),
+            ("current date", self.handle_date),
+            ("add a new task", self.handle_add_task),
+            ("add a task", self.handle_add_task),
+            ("search for task", self.handle_search_task),
+            ("play music", self.handle_play_music),
+            ("pause music", self.handle_pause_music),
+            ("resume music", self.handle_resume_music),
+            ("stop music", self.handle_stop_music),
+            ("play game", self.handle_play_game),
+            ("start game", self.handle_play_game),
+            ("stop game", self.handle_stop_game),
+            ("end game", self.handle_stop_game),
+            ("download", self.handle_download),
+            ("hi", self.handle_greeting),
+            ("hello", self.handle_greeting),
+            ("hey", self.handle_greeting),
+            ("how are you", self.handle_how_are_you),
+            ("time", self.handle_time),
+            ("date", self.handle_date),
+            ("start", self.handle_start_my_day),
+            ("news", self.handle_news),
+            ("next", self.handle_next_track),
+            ("skip", self.handle_next_track),
+            ("pause", self.handle_pause_music),
+            ("resume", self.handle_resume_music),
+            ("stop", self.handle_stop_music),
+            ("shutdown", self.handle_shutdown),
+        ]
+        # Sort command mappings by phrase length (longest first)
+        self.command_mappings.sort(key=lambda x: len(x[0]), reverse=True)
+
     def init_porcupine(self):
-        """Initialize the Porcupine wake word detection engine."""
         try:
-            self.porcupine = pvporcupine.create(access_key=self.access_key, keyword_paths=[self.keyword_path])
-            logging.info("Porcupine initialized successfully.")
+            self.porcupine = pvporcupine.create(
+                access_key=self.access_key,
+                keyword_paths=[self.keyword_path]
+            )
+            logging.info("Porcupine initialized.")
         except Exception as e:
             logging.error(f"Failed to initialize Porcupine: {e}")
-            self.porcupine = None
 
     def init_audio_stream(self):
-        """Initialize the audio stream for capturing microphone input."""
+        if self.porcupine is None:
+            logging.error("Porcupine is not initialized. Cannot initialize audio stream.")
+            return
         try:
             pa = pyaudio.PyAudio()
-            if self.porcupine:
-                self.audio_stream = pa.open(
-                    rate=self.porcupine.sample_rate,
-                    channels=1,
-                    format=pyaudio.paInt16,
-                    input=True,
-                    frames_per_buffer=self.porcupine.frame_length
-                )
-                logging.info("Audio stream initialized successfully.")
+            self.audio_stream = pa.open(
+                rate=self.porcupine.sample_rate,
+                channels=1,
+                format=pyaudio.paInt16,
+                input=True,
+                frames_per_buffer=self.porcupine.frame_length
+            )
+            logging.info("Audio stream initialized.")
         except Exception as e:
             logging.error(f"Failed to initialize audio stream: {e}")
 
     def start(self):
-        """Start the assistant, initialize resources and begin listening for wake words."""
         try:
             self.gesture_module.start_hand_gesture_detection()
-            self.init_porcupine()
-            self.init_audio_stream()
             self.is_running = True
-            self.thread = threading.Thread(target=self.run)
-            self.thread.start()
-            logging.info("Assistant started and listening for keyword or looking for gesture.")
             self.util.playChime('success')
+            logging.info("Assistant started.")
+            self.run()
         except Exception as e:
             logging.error(f"Error in start: {e}")
 
     def run(self):
-        """Run the main loop to detect keywords and respond."""
         try:
             while self.is_running:
+                if self.is_processing_command:
+                    continue
+
                 if self.porcupine and self.audio_stream:
-                    pcm = self.audio_stream.read(self.porcupine.frame_length, exception_on_overflow=False)
+                    pcm = self.audio_stream.read(
+                        self.porcupine.frame_length,
+                        exception_on_overflow=False
+                    )
                     pcm = struct.unpack_from("h" * self.porcupine.frame_length, pcm)
                     keyword_index = self.porcupine.process(pcm)
                     if keyword_index >= 0:
                         logging.info("Keyword detected.")
                         self.executor.submit(self.on_keyword_detected)
-                if self.gesture_module.detect_hand_gesture():
+                        continue
+
+                if not self.is_processing_command and self.gesture_module.detect_hand_gesture():
                     logging.info("Hand gesture detected.")
                     self.executor.submit(self.on_keyword_detected)
+                    continue
+
         except Exception as e:
             logging.error(f"Error in run loop: {e}")
 
     def on_keyword_detected(self):
-        """Handle the event when a keyword is detected."""
+        self.is_processing_command = True
         self.util.playChime('success')
         logging.info("Chime played for keyword detection.")
-    
+
         if self.music_player.is_playing:
             self.music_player.set_volume(20)
-    
+
         self.close_audio_stream()
-    
+
         try:
             command = self.util.getSpeech()
-            if not command:  # Check for empty command
+            if not command:
+                self.is_processing_command = False
                 return
+            if isinstance(command, list):
+                command = ' '.join(map(str, command))
             logging.debug(f"Recognized command: {command}")
         except Exception as e:
             logging.error(f"Error in speech recognition: {e}")
-            self.init_audio_stream()  # Ensure audio stream is reinitialized
+            self.init_audio_stream()
+            self.is_processing_command = False
             return
-    
-        if self.music_player.is_playing and "stop" not in command.lower() and not {"song", "music"} & set(command.lower().split()): # type: ignore
+
+        if self.music_player.is_playing and "stop" not in command.lower() and not {"song", "music"} & set(command.lower().split()):
             logging.error("Please stop the music player first by saying 'stop music'.")
         else:
             self.process_command(command)
-    
+
         if self.music_player.is_playing:
             self.music_player.set_volume(100)
-    
+
         self.init_audio_stream()
+        self.is_processing_command = False
+        time.sleep(1)  # Delay before re-enabling gesture detection
 
     def process_command(self, command):
-        """Process the command after detecting the wake word."""
-        logging.debug(f"Processing command: {command}")
-        command_words = set(command.lower().split())
-        if command_words & commands:
-            self.handle_known_commands(command.lower())
-        else:
-            self.handle_unknown_command(command)
+        """Process the input command and invoke the corresponding handler."""
+        command = command.lower().strip()
+        for phrase, handler in self.command_mappings:
+            if phrase in command:
+                handler(command)
+                return
+        self.handle_unknown_command(command)
 
-    def handle_known_commands(self, command):
-        # processed_tokens = self.command_processor.preprocess_command(command)
-        if any(greet in command for greet in ["hi", "hello", "wassup", "what's up", "hey", "sup"]):
-            self.repSpeak('/home/pi/FAM/tts_audio_files/Hello__How_can_I_help_you_today_.mp3')
-        elif "how are you" in command:
-            self.repSpeak('/home/pi/FAM/tts_audio_files/I_m_doing_great__How_can_I_help_you_today_.mp3')
-        elif any(time in command for time in ["time", "what time is it", "current time"]):
-            self.util.speak(self.util.getTime())
-        elif any(date in command for date in ["date", "what's the date", "current date"]):
-            self.util.speak(self.util.getDate())
-        elif any(start in command for start in ["start", "start my day", "good morning"]):
-            self.util.startMyDay()
-        elif any(news in command for news in ["news", "daily news", "what's happening", "what's the news"]):
-            self.repSpeak('/home/pi/FAM/tts_audio_files/Here_are_the_top_news_headlines___.mp3')
-            news = self.util.getNews()
-            for headline in news:
-                self.util.speak(headline)
-        elif "download" in command:
-            song_name = command[9:].strip()  # remove download and extract song name
-            if song_name:
-                subprocess.run(["/home/pi/FAM/env/bin/python3", "/home/pi/FAM/libs/music_search.py", song_name])
-                self.util.speak(f"{song_name} downloaded successfully.")
-        elif "play music" in command:
-            self.music_player.play_music_thread()
-        elif "pause" in command:
-            self.repSpeak('/home/pi/FAM/tts_audio_files/Pausing_music___.mp3')
-            self.music_player.pause_music()
-        elif "resume" in command:
-            self.repSpeak('/home/pi/FAM/tts_audio_files/Unpausing_music___.mp3')
-            self.music_player.unpause_music()
-        elif "stop" in command:
-            self.repSpeak('/home/pi/FAM/tts_audio_files/Stopping_music___.mp3')
-            self.music_player.stop_music()
-        elif any(skip in command for skip in ["next", "skip"]):
-            self.repSpeak('/home/pi/FAM/tts_audio_files/Playing_next_track___.mp3')
-            self.music_player.play_next()
-        elif "seek forward" in command:
-            self.repSpeak('/home/pi/FAM/tts_audio_files/Seeking_forward_by_10_seconds.mp3')
-            self.seek_forward()
-        elif "shut down" in command or "shutdown" in command:
-            self.repSpeak('/home/pi/FAM/tts_audio_files/Quitting_the_program.mp3')
-            subprocess.run(["sudo", "shutdown", "now"])
-            self.stop()
-            sys.exit(0)
-        elif any(task in command for task in ["add task", "add a task", "add a new task"]):
-            self.repSpeak('/home/pi/FAM/tts_audio_files/Please_provide_the_task_.mp3')
-            self.add_task()
-        elif any(search in command for search in ["search task", "search for task"]):
-            self.repSpeak('/home/pi/FAM/tts_audio_files/Please_provide_the_task_to_search_for_.mp3')
-            self.search_task()
-        elif any(game in command for game in ["play game", "start game"]):
-            self.games.play_game()
-            ip_address = get_ip_address()
-            self.util.send_email(recipient='akshatsingh14372@outlook.com', subject="Fam Games Hub Invite", plain_content='' , html_content=self.returnEmailSubject(ip_address))
-        elif any(game in command for game in ["stop game", "end game"]):
-            self.games.stop_game()
-            self.repSpeak('/home/pi/FAM/tts_audio_files/game_over.mp3')
-        elif any(bt in command for bt in ["start bluetooth mode", "enable bluetooth mode", "bluetooth speaker mode"]):
-            self.bt_manager.start_bluetooth_mode()
-            self.util.speak("Bluetooth mode started. The device is now acting as a Bluetooth speaker.")
-        elif any(bt in command for bt in ["stop bluetooth mode", "disable bluetooth mode", "exit bluetooth speaker mode"]):
-            self.bt_manager.stop_bluetooth_mode()
-            self.util.speak("Bluetooth mode stopped.")
-                
+    # Handler methods
+    def handle_greeting(self, _command):
+        self.repSpeak('/home/pi/FAM/tts_audio_files/Hello__How_can_I_help_you_today_.mp3')
+
+    def handle_how_are_you(self, _command):
+        self.repSpeak('/home/pi/FAM/tts_audio_files/I_m_doing_great__How_can_I_help_you_today_.mp3')
+
+    def handle_time(self, _command):
+        self.util.speak(self.util.getTime())
+
+    def handle_date(self, _command):
+        self.util.speak(self.util.getDate())
+
+    def handle_start_my_day(self, _command):
+        self.util.startMyDay()
+
+    def handle_news(self, _command):
+        self.repSpeak('/home/pi/FAM/tts_audio_files/Here_are_the_top_news_headlines___.mp3')
+        news = self.util.getNews()
+        for headline in news:
+            self.util.speak(headline)
+
+    def handle_download(self, command):
+        song_name = command.replace("download", "").strip()
+        if song_name:
+            subprocess.run(
+                ["/home/pi/FAM/env/bin/python3", "/home/pi/FAM/libs/music_search.py", song_name]
+            )
+            self.util.speak(f"{song_name} downloaded successfully.")
+
+    def handle_play_music(self, _command):
+        self.music_player.play_music_thread()
+
+    def handle_pause_music(self, _command):
+        self.repSpeak('/home/pi/FAM/tts_audio_files/Pausing_music___.mp3')
+        self.music_player.pause_music()
+
+    def handle_resume_music(self, _command):
+        self.repSpeak('/home/pi/FAM/tts_audio_files/Unpausing_music___.mp3')
+        self.music_player.unpause_music()
+
+    def handle_stop_music(self, _command):
+        self.repSpeak('/home/pi/FAM/tts_audio_files/Stopping_music___.mp3')
+        self.music_player.stop_music()
+
+    def handle_next_track(self, _command):
+        self.repSpeak('/home/pi/FAM/tts_audio_files/Playing_next_track___.mp3')
+        self.music_player.play_next()
+
+    def handle_shutdown(self, _command):
+        self.repSpeak('/home/pi/FAM/tts_audio_files/Quitting_the_program.mp3')
+        subprocess.run(["sudo", "shutdown", "now"])
+        self.stop()
+        sys.exit(0)
+
+    def handle_add_task(self, _command):
+        self.repSpeak('/home/pi/FAM/tts_audio_files/Please_provide_the_task_.mp3')
+        self.add_task()
+
+    def handle_search_task(self, _command):
+        self.repSpeak('/home/pi/FAM/tts_audio_files/Please_provide_the_task_to_search_for_.mp3')
+        self.search_task()
+
+    def handle_play_game(self, _command):
+        self.games.play_game()
+        ip_address = get_ip_address()
+        self.util.send_email(
+            recipient='example@example.com',
+            subject="Fam Games Hub Invite",
+            plain_content='',
+            html_content=self.returnEmailSubject(ip_address)
+        )
+
+    def handle_stop_game(self, _command):
+        self.games.stop_game()
+        self.repSpeak('/home/pi/FAM/tts_audio_files/game_over.mp3')
+
+    def handle_start_bluetooth_mode(self, _command):
+        self.bt_manager.start_bluetooth_mode()
+        self.util.speak("Bluetooth mode started. The device is now acting as a Bluetooth speaker.")
+
+    def handle_stop_bluetooth_mode(self, _command):
+        self.bt_manager.stop_bluetooth_mode()
+        self.util.speak("Bluetooth mode stopped.")
+
+    def handle_unknown_command(self, command):
+        logging.info(f"Handling unknown command: {command}")
+        reply = self.gpt.live_chat_with_ai(command)
+        if reply:
+            self.util.speak(reply)
+        else:
+            logging.error("No reply from GPT")
+
     def repSpeak(self, file):
-        subprocess.run(['ffplay', '-nodisp', '-autoexit', file], check=True)
+        subprocess.run(['ffplay', '-nodisp', '-autoexit', file], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
     def seek_forward(self):
-        try:
-            seconds = 10
-            self.util.speak(f"Seeking forward by {seconds} seconds")
-            self.music_player.seek_forward(seconds)
-        except ValueError:
-            self.util.speak("Invalid time. Please provide the number of seconds to seek forward.")
+        seconds = 10
+        self.music_player.seek_forward(seconds)
 
     def add_task(self):
-        task = self.util.speak("Please provide the task!")
+        task = self.util.getSpeech()
         if task:
+            if isinstance(task, list):
+                task = ' '.join(map(str, task))
             self.util.speak(f"Adding task: {task}")
             self.task_manager.add_task_at_start(task)
 
     def search_task(self):
-        task = self.util.speak("Please provide the task to search for!")
+        task = self.util.getSpeech()
         if task:
+            if isinstance(task, list):
+                task = ' '.join(map(str, task))
             self.util.speak(f"Searching for task: {task}")
-            tasks = [task.name for task in self.task_manager.display_tasks()]
+            tasks = [t.name for t in self.task_manager.display_tasks()]
             close_matches = difflib.get_close_matches(task, tasks, n=1, cutoff=0.7)
             if close_matches:
                 matched_task = close_matches[0]
@@ -338,14 +416,7 @@ class FamAssistant:
             else:
                 self.util.speak("No matching task found.")
 
-    def handle_unknown_command(self, command):
-        """Handle unknown commands by using the AI chat inference."""
-        logging.info(f"Handling unknown command: {command}")
-        reply = str(self.gpt.live_chat_with_ai(str(command)))
-        self.util.speak(reply)
-
     def close_audio_stream(self):
-        """Close the audio stream to free up resources."""
         if self.audio_stream:
             self.audio_stream.stop_stream()
             self.audio_stream.close()
@@ -353,20 +424,13 @@ class FamAssistant:
             logging.info("Audio stream closed.")
 
     def stop(self):
-        """Stop the assistant and clean up resources."""
         self.is_running = False
-        if self.thread:
-            self.thread.join()
         self.close_audio_stream()
         if self.porcupine:
             self.porcupine.delete()
         self.music_player.stop_music()
+        self.gesture_module.stop()
         logging.info("Assistant stopped.")
-
-    def run_in_thread(self):
-        """Run the assistant in a separate thread."""
-        self.thread = threading.Thread(target=self.start)
-        self.thread.start()
 
     def returnEmailSubject(self, ip_address):
         html_content = f'''
@@ -458,12 +522,3 @@ class FamAssistant:
         '''
         return html_content
     
-# Define known commands as a set for faster lookup
-commands = {
-    "search task", "search for task", "how are you", "hi", "hello", "wassup", "what's up", "hey", "sup", "time", 
-    "what time is it", "current time", "date", "what's the date", "current date", "start", "end",
-    "start my day", "good morning", "news", "daily news", "what's happening", "what's the news", "play", 
-    "play music", "pause", "resume", "stop", "next", "skip", "add task", "seek forward", "shut down", "shutdown", "music",
-    "start Bluetooth mode", "enable Bluetooth mode", "Bluetooth speaker mode", "stop Bluetooth mode", "disable Bluetooth mode", "exit bluetooth speaker mode",
-    "bluetooth", "download"
-}

@@ -1,5 +1,6 @@
 import yaml
 import time
+import threading
 from _fam_assistant import FamAssistant
 
 def load_config():
@@ -23,17 +24,19 @@ def main():
     keyword_path = "/home/pi/FAM/model/Hey-Fam_en_raspberry-pi_v3_0_0.ppn"
     music_path = config['main']['music_path']
 
-    porcupine_listener = FamAssistant(access_key=access_key, keyword_path=keyword_path, music_path=music_path)
-    porcupine_listener.run_in_thread()
+    assistant = FamAssistant(access_key=access_key, keyword_path=keyword_path, music_path=music_path)
 
-    return porcupine_listener
+    # Start the assistant in a separate thread
+    assistant_thread = threading.Thread(target=assistant.start, daemon=True)
+    assistant_thread.start()
+
+    return assistant, assistant_thread
 
 if __name__ == "__main__":
-    porcupine_listener = main()
+    assistant, assistant_thread = main()
     try:
         while True:
-            pass
+            time.sleep(1)
     except (KeyboardInterrupt, SystemExit):
-        porcupine_listener.stop()
-        if porcupine_listener.thread is not None:
-            porcupine_listener.thread.join()
+        assistant.stop()
+        assistant_thread.join()

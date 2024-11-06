@@ -18,36 +18,33 @@ class BluetoothManager:
         self.ensure_bluetooth_service_active()
 
         try:
-            # Set Bluetooth agent to NoInputNoOutput mode
-            subprocess.run(["bluetoothctl", "agent", "NoInputNoOutput"], check=True)
-            # Register the agent
-            subprocess.run(["bluetoothctl", "agent", "on"], check=True)
-            
-            # Retry setting the default agent up to 3 times if it fails
-            for attempt in range(3):
-                result = subprocess.run(["bluetoothctl", "default-agent"], check=False)
-                if result.returncode == 0:
-                    logging.info("Default agent successfully set.")
-                    break
-                logging.warning(f"Attempt {attempt + 1} to set default agent failed.")
-                time.sleep(2)
-            else:
-                logging.error("Failed to set default agent after multiple attempts.")
-                return  # Stop further setup if agent setup fails
+            # Start bluetoothctl process
+            process = subprocess.Popen(['bluetoothctl'], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True)
 
-            # Make the device discoverable and pairable
-            subprocess.run(["bluetoothctl", "discoverable", "on"], check=True)
-            subprocess.run(["bluetoothctl", "pairable", "on"], check=True)
+            # Send commands to bluetoothctl
+            commands = [
+                'agent NoInputNoOutput',
+                'default-agent',
+                'power on',
+                'discoverable on',
+                'pairable on',
+                'agent on',
+            ]
+            for cmd in commands:
+                logging.info(f"Sending command: {cmd}")
+                process.stdin.write(cmd + '\n')
+                process.stdin.flush()
+                time.sleep(0.5)  # Small delay to ensure command execution
 
             self.is_bluetooth_mode_on = True
             logging.info("Bluetooth mode started. The device is now discoverable and pairable.")
-            
+
             # Connect to the paired device
             self.connect_paired_device()
-            
+
             # Play connection sound
             self.play_sound("/home/pi/FAM/assets/audio/success.mp3")
-        except subprocess.CalledProcessError as e:
+        except Exception as e:
             logging.error(f"Failed to start Bluetooth mode: {e}")
 
     def stop_bluetooth_mode(self):
@@ -56,50 +53,66 @@ class BluetoothManager:
             return
 
         try:
-            # Make the device non-discoverable and non-pairable
-            subprocess.run(["bluetoothctl", "discoverable", "off"], check=True)
-            subprocess.run(["bluetoothctl", "pairable", "off"], check=True)
+            # Start bluetoothctl process
+            process = subprocess.Popen(['bluetoothctl'], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True)
+
+            # Send commands to bluetoothctl
+            commands = [
+                'discoverable off',
+                'pairable off',
+                'agent off',
+            ]
+            for cmd in commands:
+                logging.info(f"Sending command: {cmd}")
+                process.stdin.write(cmd + '\n')
+                process.stdin.flush()
+                time.sleep(0.5)
 
             self.is_bluetooth_mode_on = False
             logging.info("Bluetooth mode stopped.")
-            
+
             # Play disconnection sound
             self.play_sound("/home/pi/FAM/assets/audio/load.mp3")
-        except subprocess.CalledProcessError as e:
+        except Exception as e:
             logging.error(f"Failed to stop Bluetooth mode: {e}")
 
     def connect_paired_device(self):
         try:
             # List paired devices
-            result = subprocess.run(["bluetoothctl", "paired-devices"], capture_output=True, text=True, check=True)
-            paired_devices = result.stdout.splitlines()
-            
+            result = subprocess.run(['bluetoothctl', 'paired-devices'], capture_output=True, text=True)
+            paired_devices = result.stdout.strip().split('\n')
+
             if paired_devices:
                 # Extract the MAC address of the first paired device
-                device_mac = paired_devices[0].split()[1]
-                
-                # Trust the device
-                subprocess.run(["bluetoothctl", "trust", device_mac], check=True)
-                
-                # Attempt to connect to the device
-                connect_attempts = 3
-                for attempt in range(connect_attempts):
-                    try:
-                        subprocess.run(["bluetoothctl", "connect", device_mac], check=True)
-                        logging.info(f"Connected to paired device: {device_mac}")
-                        break
-                    except subprocess.CalledProcessError as e:
-                        logging.error(f"Connection attempt {attempt + 1} failed: {e}")
-                        if attempt == connect_attempts - 1:
-                            logging.error("All connection attempts failed.")
+                device_info = paired_devices[0].split()
+                if len(device_info) >= 2:
+                    device_mac = device_info[1]
+
+                    # Start bluetoothctl process
+                    process = subprocess.Popen(['bluetoothctl'], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True)
+
+                    # Trust and connect to the device
+                    cmds = [
+                        f'trust {device_mac}',
+                        f'connect {device_mac}',
+                    ]
+                    for cmd in cmds:
+                        logging.info(f"Sending command: {cmd}")
+                        process.stdin.write(cmd + '\n')
+                        process.stdin.flush()
+                        time.sleep(1)
+
+                    logging.info(f"Connected to paired device: {device_mac}")
+                else:
+                    logging.warning("No valid paired devices found.")
             else:
                 logging.warning("No paired devices found.")
-        except subprocess.CalledProcessError as e:
+        except Exception as e:
             logging.error(f"Failed to connect to paired device: {e}")
 
     def play_sound(self, file_path):
         try:
-            subprocess.run(["ffplay", "-nodisp", "-autoexit", file_path], check=True)
+            subprocess.run(['ffplay', '-nodisp', '-autoexit', file_path], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         except subprocess.CalledProcessError as e:
             logging.error(f"Failed to play sound: {e}")
 
@@ -113,6 +126,7 @@ class BluetoothManager:
 
 # Example usage
 if __name__ == "__main__":
+    logging.basicConfig(level=logging.INFO)
     bt_manager = BluetoothManager()
     bt_manager.start_bluetooth_mode()
     input("Press Enter to stop Bluetooth mode...")
