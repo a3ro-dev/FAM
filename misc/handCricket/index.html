@@ -1,0 +1,109 @@
+<!-- 
+    Author: Atanu Sarkar
+    03/02/2020
+
+    Date: 03/02/2020
+    version: 1.0.0
+    basic framework of the page completed
+
+    Date: 05/02/2020
+    version: 1.0.1
+    some modifications made in accordance to app.js and style.css
+
+    Date: 06/02/2020
+    version: 1.0.1
+    added required ids to hide tags on gameOver
+-->
+
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hand Cricket Game</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <!-- HEADER BAR -->
+    <header>
+        <h1>Hand Cricket</h1>
+    </header>
+
+    <!-- STATUS BAR -->
+    <div class="status">
+        <img src="resources/images/cricket-bat.png" alt="Bat image" id="img_bat">
+        <span class="status-txt" id="p1-name">Player 1</span>
+        <span class="status-txt" id="status_center_text">batting&nbsp&nbsp|&nbsp&nbspbowling</span>
+        <span class="status-txt" id="p2-name">Player 2</span>
+        <img src="resources/images/cricket-ball.png" alt="Ball image" id="img_ball">
+    </div>
+
+    <!-- FULL SCORE BOARD and TARGET RUNS, OVERS(to-do later) or FIRST BAT -->
+    <div class="score-board">
+        <!-- TO DO-->
+    </div>
+    
+    <!-- SCORE CARD (Runs/Wickets) -->
+    <div class="score-card">
+        <div id="runs-label" class="card-badge">runs</div>
+        <div id="wickets-label" class="card-badge">wickets</div>
+        <span id="runs">0</span>/<span id="wickets">0</span>
+        <div class="score-card-footer">
+            <p id="overs">Overs: 0.0</p>
+            <p id="target">Target: Nil</p>
+        </div>
+        
+    </div>
+
+    <!-- Who played what... and the result of that action -->
+    <div class="results">
+        <div id="results-disp">
+            <span class="result-txt" id="p1-name-res">Player 1</span> played
+            <span class="result-img"><img src="resources/images/hand-with-one-finger.png" alt="" id="p1-action-img" class="action-img"></span>
+            <span class="result-txt"> vs </span>
+            <span class="result-img"><img src="resources/images/hand-with-one-finger.png" alt="" id="p2-action-img" class="action-img"></span>
+            <span class="result-txt" id="p2-name-res">Player 2</span> played
+        </div>
+        <p id="result-message">The Game Started! Make your first move!</p>
+    </div>
+
+    <!-- Choices for Game Play-->
+    <!-- Row 1 -->
+    <div class="Choices">
+        <div class="choice" id="hand1">
+            <img class="hand" src="resources/images/hand-with-one-finger.png" alt="1">
+        </div>
+        <div class="choice" id="hand2">
+            <img class="hand" src="resources/images/hand-with-two-finger.png" alt="2">
+        </div>
+        <div class="choice" id="hand3">
+            <img class="hand" src="resources/images/hand-with-three-finger.png" alt="3">
+        </div>
+    </div>
+    <!-- Row 2 -->
+    <div class="Choices">
+        <div class="choice" id="hand4">
+            <img class="hand" src="resources/images/hand-with-four-finger.png" alt="4">
+        </div>
+        <div class="choice" id="hand5">
+            <img class="hand" src="resources/images/hand-with-five-finger.png" alt="5">
+        </div>
+        <div class="choice" id="hand6">
+            <img class="hand" src="resources/images/hand-with-thumb-finger.png" alt="6">
+        </div>
+    </div>
+    <!-- Row 3 -->
+    <div class="Choices">
+        <div class="choice" id="hand0">
+            <img class="hand" src="resources/images/hand-with-zero-finger.png" alt="0">
+        </div>
+    </div>
+
+    <!-- Display "Make Your Move"-->
+    <p id="action-message">make your move.</p>
+
+    <!-- Link JS -->
+    <script src="js/app.js" charset="utf-8"></script>
+    
+</body>
+</html>
