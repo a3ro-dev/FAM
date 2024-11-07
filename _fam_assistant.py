@@ -358,7 +358,7 @@ class FamAssistant:
         self.games.play_game()
         ip_address = get_ip_address()
         self.util.send_email(
-            recipient='example@example.com',
+            recipient='akshatsingh14372@outlook.com',
             subject="Fam Games Hub Invite",
             plain_content='',
             html_content=self.returnEmailSubject(ip_address)
