@@ -6,6 +6,7 @@ import datetime
 import yaml
 import subprocess
 from functools import lru_cache
+from difflib import SequenceMatcher
 
 with open('conf/config.yaml', 'r') as file:
     config = yaml.safe_load(file)
@@ -13,30 +14,6 @@ groqKey = config['main']['groq_api_key']
 openaiKey = config['main']['openai_api_key']
 
 class Generation:
-    """
-    A class that handles various generative AI tasks in the backend.
-
-    Methods
-    -------
-    __init__():
-        Initializes the Generation class with default settings.
-    encode_image(image_path: str) -> str:
-        Encodes an image from the given file path to a base64 string.
-    generate_text_response(text: str) -> str:
-        Generates a text response based on the provided input text using the Groq API.
-    generate_text_with_image(text: str, image: str) -> str:
-        Generates a text response based on the provided input text and image using the OpenAI API.
-    live_chat_with_ai(text: str) -> str:
-        Engages in a live chat with the AI, providing conversational responses based on the input text.
-    search_wikipedia(query: str) -> str:
-        Searches Wikipedia for the given query and returns a summary.
-    search_duckduckgo(query: str) -> str:
-        Searches DuckDuckGo for the given query and returns a summary.
-    extract_code(response: str) -> str:
-        Extracts code from a response string enclosed in triple backticks.
-    run_python_code(code: str) -> str:
-        Runs the provided Python code and returns the output or an error message.
-    """
     def __init__(self):
         self.messages = []
         self.max_messages = 10
@@ -53,10 +30,7 @@ class Generation:
 
         completion = self.client.chat.completions.create(
             model="mixtral-8x7b-32768",
-            messages=[
-                {"role": "system", "content": system_message},
-                {"role": "user", "content": text}
-            ],
+            messages=[{"role": "system", "content": system_message}, {"role": "user", "content": text}],
             temperature=1,
             max_tokens=8192,
             top_p=1,
@@ -97,7 +71,7 @@ class Generation:
         current_time_date = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         system_message = (
             f"Current time and date: {current_time_date}. "
-            "You are Fam, an AI voice assistant created by Akshat Kushwaha. "
+            "You are Fam, an AI voice assistant created by Akshat Singh Kushwaha. "
             "You must answer in brief sentences and in human-like language. "
             "Do not use any styling such as **bold** or _italic_. "
             "Do not return any code. Only provide conversational responses, questions, and answers. "
@@ -107,10 +81,7 @@ class Generation:
 
         completion = self.client.chat.completions.create(
             model="mixtral-8x7b-32768",
-            messages=self.messages + [
-                {"role": "system", "content": system_message},
-                {"role": "user", "content": text}
-            ],
+            messages=self.messages + [{"role": "system", "content": system_message}, {"role": "user", "content": text}],
             temperature=1,
             max_tokens=409,
             top_p=1,
@@ -119,6 +90,10 @@ class Generation:
         )
 
         response = completion.choices[0].message.content
+
+        # Check for repeated responses
+        if self.messages and self.is_similar_response(response, self.messages[-1]['content']):
+            return "I'm sorry, but it seems I'm repeating myself. Can you please rephrase your question?"
 
         if response and "SEARCH_WIKIPEDIA" in response:
             search_term = text
@@ -142,6 +117,10 @@ class Generation:
 
         self.messages.append({"role": "assistant", "content": response})
         return response
+
+    def is_similar_response(self, new_response: str, last_response: str, threshold: float = 0.9) -> bool:
+        similarity = SequenceMatcher(None, new_response, last_response).ratio()
+        return similarity > threshold
 
     @lru_cache(maxsize=32)
     def search_wikipedia(self, query: str) -> str:
