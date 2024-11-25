@@ -72,18 +72,21 @@ class Generation:
         system_message = (
             f"Current time and date: {current_time_date}. "
             "You are Fam, an AI voice assistant created by Akshat Singh Kushwaha. "
-            "You must answer in brief sentences and in human-like language. "
-            "Do not use any styling such as **bold** or _italic_. "
-            "Do not return any code. Only provide conversational responses, questions, and answers. "
-            "If you feel you lack the information to answer a question, only return 'SEARCH_WIKIPEDIA' or 'SEARCH_DUCKDUCKGO'. "
-            "If you need to calculate something or run code, only return 'RUN_PYTHON_CODE'."
+            "Provide correct and factual answers, and use the available tools when necessary. "
+            "Use 'SEARCH_WIKIPEDIA <query>' to search Wikipedia, "
+            "'SEARCH_DUCKDUCKGO <query>' for a web search, "
+            "'RUN_PYTHON_CODE' followed by code to execute Python code, "
+            "Respond thoroughly and do not hesitate to use tokens."
         )
+
+        self.messages.append({"role": "system", "content": system_message})
+        self.messages.append({"role": "user", "content": text})
 
         completion = self.client.chat.completions.create(
             model="mixtral-8x7b-32768",
-            messages=self.messages + [{"role": "system", "content": system_message}, {"role": "user", "content": text}],
-            temperature=1,
-            max_tokens=409,
+            messages=self.messages,
+            temperature=0.7,
+            max_tokens=2048,
             top_p=1,
             stream=False,
             stop=None,
@@ -91,32 +94,35 @@ class Generation:
 
         response = completion.choices[0].message.content
 
-        # Check for repeated responses
-        if self.messages and self.is_similar_response(response, self.messages[-1]['content']):
-            return "I'm sorry, but it seems I'm repeating myself. Can you please rephrase your question?"
-
-        if response and "SEARCH_WIKIPEDIA" in response:
-            search_term = text
+        # Process special commands in the assistant's response
+        if "SEARCH_WIKIPEDIA" in response:
+            search_term = self.extract_command_argument(response, "SEARCH_WIKIPEDIA")
             wiki_summary = self.search_wikipedia(search_term)
-            response = response.replace("SEARCH_WIKIPEDIA", f"```\n{wiki_summary}\n```")
+            response = response.replace(f"SEARCH_WIKIPEDIA {search_term}", wiki_summary)
             return self.live_chat_with_ai(f"{text}\n\n{wiki_summary}")
 
-        if response and "SEARCH_DUCKDUCKGO" in response:
-            search_term = text
+        if "SEARCH_DUCKDUCKGO" in response:
+            search_term = self.extract_command_argument(response, "SEARCH_DUCKDUCKGO")
             duckduckgo_summary = self.search_duckduckgo(search_term)
-            response = response.replace("SEARCH_DUCKDUCKGO", f"```\n{duckduckgo_summary}\n```")
+            response = response.replace(f"SEARCH_DUCKDUCKGO {search_term}", duckduckgo_summary)
             return self.live_chat_with_ai(f"{text}\n\n{duckduckgo_summary}")
 
-        if response and "RUN_PYTHON_CODE" in response:
+        if "RUN_PYTHON_CODE" in response:
             code_to_run = self.extract_code(response)
             code_output = self.run_python_code(code_to_run)
-            if code_output is None:
-                code_output = "Failed to respond."
-            response = response.replace("RUN_PYTHON_CODE", f"```\n{code_output}\n```")
+            response = response.replace(f"RUN_PYTHON_CODE\n{code_to_run}", code_output)
             return self.live_chat_with_ai(f"{text}\n\n{code_output}")
 
         self.messages.append({"role": "assistant", "content": response})
         return response
+
+    def extract_command_argument(self, response: str, command: str) -> str:
+        # Extract the argument following the command
+        start = response.find(command) + len(command)
+        end = response.find("\n", start)
+        if end == -1:
+            end = len(response)
+        return response[start:end].strip()
 
     def is_similar_response(self, new_response: str, last_response: str, threshold: float = 0.9) -> bool:
         similarity = SequenceMatcher(None, new_response, last_response).ratio()
