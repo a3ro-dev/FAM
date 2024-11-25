@@ -1,11 +1,11 @@
 import pyaudio
-import pvporcupine
+import pvporcupine 
 import threading
 import struct
 import sys
 import subprocess
 import socket
-import numpy as np
+import numpy as np 
 import logging
 import RPi.GPIO as GPIO
 import concurrent.futures
@@ -39,6 +39,7 @@ def get_ip_address():
     return ip_address
 
 class GestureModule:
+    """Class to handle gesture detection using ultrasonic sensors."""
     def __init__(self, trigger_pin=18, echo_pin=24, distance_range=(2, 5), gesture_interval=0.2, debounce_time=1.0):
         self.trigger_pin = trigger_pin
         self.echo_pin = echo_pin
@@ -119,6 +120,8 @@ class GestureModule:
         self.cleanup_gpio()
 
 class FamAssistant:
+    """Main class for the FamAssistant, handling voice and gesture interactions."""
+
     def __init__(self, access_key, keyword_path, music_path):
         self.access_key = access_key
         self.keyword_path = keyword_path
@@ -211,16 +214,31 @@ class FamAssistant:
             logging.error(f"Failed to initialize audio stream: {e}")
 
     def start(self):
-        try:
-            self.gesture_module.start_hand_gesture_detection()
-            self.is_running = True
-            self.util.playChime('success')
-            logging.info("Assistant started.")
-            self.run()
-        except Exception as e:
-            logging.error(f"Error in start: {e}")
+        """Start the assistant by initializing gesture and wake word detection threads."""
+        self.is_running = True
+        self.util.playChime('success')
+        logging.info("Assistant started.")
 
-    def run(self):
+        # Start gesture detection thread
+        gesture_thread = threading.Thread(target=self.gesture_detection_loop, daemon=True)
+        gesture_thread.start()
+
+        # Start wake word detection thread
+        wake_word_thread = threading.Thread(target=self.wake_word_detection_loop, daemon=True)
+        wake_word_thread.start()
+
+    def gesture_detection_loop(self):
+        """Continuously detects hand gestures and triggers command processing."""
+        try:
+            while self.is_running:
+                if not self.is_processing_command and self.gesture_module.detect_hand_gesture():
+                    logging.info("Hand gesture detected.")
+                    self.executor.submit(self.on_keyword_detected)
+        except Exception as e:
+            logging.error(f"Error in gesture detection loop: {e}")
+
+    def wake_word_detection_loop(self):
+        """Continuously listens for the wake word and triggers command processing."""
         try:
             while self.is_running:
                 if self.is_processing_command:
@@ -234,19 +252,13 @@ class FamAssistant:
                     pcm = struct.unpack_from("h" * self.porcupine.frame_length, pcm)
                     keyword_index = self.porcupine.process(pcm)
                     if keyword_index >= 0:
-                        logging.info("Keyword detected.")
+                        logging.info("Wake word detected.")
                         self.executor.submit(self.on_keyword_detected)
-                        continue
-
-                if not self.is_processing_command and self.gesture_module.detect_hand_gesture():
-                    logging.info("Hand gesture detected.")
-                    self.executor.submit(self.on_keyword_detected)
-                    continue
-
         except Exception as e:
-            logging.error(f"Error in run loop: {e}")
+            logging.error(f"Error in wake word detection loop: {e}")
 
     def on_keyword_detected(self):
+        """Handles the processing after a wake word or gesture is detected."""
         self.is_processing_command = True
         self.util.playChime('success')
         logging.info("Chime played for keyword detection.")
@@ -414,6 +426,7 @@ class FamAssistant:
                 self.util.speak("No matching task found.")
 
     def close_audio_stream(self):
+        """Closes the audio stream safely."""
         if self.audio_stream:
             self.audio_stream.stop_stream()
             self.audio_stream.close()
@@ -421,6 +434,7 @@ class FamAssistant:
             logging.info("Audio stream closed.")
 
     def stop(self):
+        """Stops the assistant and cleans up resources."""
         self.is_running = False
         self.close_audio_stream()
         if self.porcupine:
@@ -518,4 +532,3 @@ class FamAssistant:
         </html>
         '''
         return html_content
-    

@@ -12,3 +12,4 @@ tests/test.py
 tests/getSpeech.py
 assets/cache/tts.mp3
 downloads
+.venv
