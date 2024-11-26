@@ -1,7 +1,7 @@
 body {
     font-family: 'Arial', sans-serif;
-    background: url('/misc/background/games-bg.png') no-repeat center center/cover;
-    
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(10px);
     margin: 0;
     padding: 0;
     display: flex;
@@ -19,13 +19,14 @@ body::before {
     left: 0;
     right: 0;
     bottom: 0;
-    background: url('/misc/background/games-bg.png') no-repeat center center/cover;
+    background: url('https://media.discordapp.net/attachments/1116703006205956157/1310921582700531783/games-bg.png?ex=6746fa5d&is=6745a8dd&hm=0fc04f282c849f0001bf0bbab35dea85e933d382190d20e022127570ca365b33&=&format=webp&quality=lossless&width=1197&height=671') no-repeat center center fixed;
     filter: blur(5px);
     z-index: -1;
 }
 
 .quiz-container {
-    background: #fff;
+    background: rgba(255, 255, 255, 0.2);
+    backdrop-filter: blur(20px);
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
     border-radius: 10px;
     overflow: hidden;
@@ -59,7 +60,9 @@ body::before {
 }
 
 .option {
-    background: #eee;
+    background: rgba(255, 255, 255, 0.25);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.3);
     padding: 10px;
     border-radius: 5px;
     cursor: pointer;
@@ -97,7 +100,9 @@ body::before {
 }
 
 .next-button {
-    background: #333;
+    background: rgba(255, 255, 255, 0.25);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.3);
     color: #fff;
     padding: 10px 20px;
     border: none;
@@ -107,5 +112,63 @@ body::before {
 }
 
 .next-button:hover {
+    background: #555;
+}
+
+.timer {
+    font-size: 1.2rem;
+    margin-bottom: 10px;
+    font-weight: bold;
+}
+
+#options-form {
+    background: rgba(255, 255, 255, 0.2);
+    backdrop-filter: blur(20px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    border-radius: 10px;
+    width: 90%;
+    max-width: 600px;
+    text-align: center;
+    padding: 20px;
+    position: relative;
+    z-index: 1;
+}
+
+#options-form h2 {
+    margin-bottom: 20px;
+}
+
+#options-form label {
+    display: block;
+    font-size: 1.2rem;
+    margin-bottom: 5px;
+    font-weight: bold;
+}
+
+#options-form input,
+#options-form select {
+    width: 80%;
+    max-width: 300px;
+    padding: 10px;
+    margin-bottom: 15px;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    border-radius: 5px;
+    font-size: 1rem;
+    background: rgba(255, 255, 255, 0.25);
+    color: #333;
+}
+
+#options-form button {
+    background: rgba(255, 255, 255, 0.25);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    color: #fff;
+    padding: 10px 20px;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background 0.3s ease;
+}
+
+#options-form button:hover {
     background: #555;
 }

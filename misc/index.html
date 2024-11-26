@@ -5,11 +5,18 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Homepage</title>
     <link rel="stylesheet" href="css/homepage.css">
+    <!-- Link the script.js file -->
+    <script src="script.js" defer></script>
 </head>
 <body>
+    <!-- Update loading screen with the correct logo path -->
+    <div id="loading-screen">
+        <img src="fam.png" alt="Logo">
+    </div>
     <div class="background"></div>
     <div class="container">
-        <h1>Fam assistant Games Hub</h1>
+        <h1>Fam Games Hub</h1>
+        <!-- Restore the button group -->
         <div class="button-group">
             <a href="quiz/index.html" class="btn">Quizz by Akshat Singh Kushwaha</a>
             <a href="keyboardHero/index.html" class="btn">Keyboard Hero by EvilPaper</a>
@@ -23,5 +30,9 @@
             <a href="SnakeGame/index.html" class="btn">Snake Game by Talha</a>
         </div>
     </div>
+    <!-- Add footer -->
+    <footer>
+        <p>Hosted on a Raspberry Pi Zero 2W and powered by FAM</p>
+    </footer>
 </body>
 </html>

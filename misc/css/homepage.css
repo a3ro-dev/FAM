@@ -8,6 +8,54 @@
 
 body, html {
     height: 100%;
+    background: url('https://media.discordapp.net/attachments/1116703006205956157/1310921582700531783/games-bg.png?ex=6746fa5d&is=6745a8dd&hm=0fc04f282c849f0001bf0bbab35dea85e933d382190d20e022127570ca365b33&=&format=webp&quality=lossless&width=1197&height=671') no-repeat center center fixed;
+    background-size: cover;
+    position: relative; /* To position the overlay and loading screen */
+}
+
+body::before {
+    /* Add overlay to dim the background */
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.6); /* Increase opacity to dim more */
+    z-index: 1;
+}
+
+/* Style for loading screen */
+#loading-screen {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: #000;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 9999;
+}
+
+#loading-screen img {
+    width: 200px;
+    animation: zoomIn 1.5s ease forwards;
+}
+
+@keyframes zoomIn {
+    0% {
+        transform: scale(0);
+        opacity: 0;
+    }
+    50% {
+        transform: scale(1.2);
+        opacity: 1;
+    }
+    100% {
+        transform: scale(1);
+    }
 }
 
 .background {
@@ -16,7 +64,7 @@ body, html {
     left: 0;
     width: 100%;
     height: 100%;
-    background: url('/misc/background/games-bg.png') no-repeat center center/cover;
+    background: url('https://media.discordapp.net/attachments/1116703006205956157/1310921582700531783/games-bg.png?ex=6746fa5d&is=6745a8dd&hm=0fc04f282c849f0001bf0bbab35dea85e933d382190d20e022127570ca365b33&=&format=webp&quality=lossless&width=1197&height=671') no-repeat center center fixed;
     z-index: -1;
     filter: blur(5px);
 }
@@ -26,68 +74,201 @@ body, html {
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    height: 100vh;
+    height: auto;
     text-align: center;
     color: #fff;
-    padding: 20px;
-    background: rgba(0, 0, 0, 0.5);
+    padding: 40px 20px;
+    padding-top: 50px;
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
     border-radius: 15px;
     box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
+    position: relative;
+    z-index: 2;
+}
+
+/* Style for carousel container */
+.carousel-container {
+    display: none;
+}
+
+/* Style for carousel */
+.carousel {
+    display: none;
+}
+
+/* Hide default scrollbar */
+.carousel::-webkit-scrollbar {
+    display: none;
+}
+
+.carousel {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+}
+
+/* Style for carousel items */
+.carousel-item {
+    display: none;
+}
+
+.carousel-item a {
+    text-decoration: none;
+    color: #fff;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+/* Remove styles related to .carousel-item img */
+
+.carousel-item span {
+    padding: 10px;
+    text-align: center;
+    font-size: 1em;
+}
+
+/* Hover effect */
+.carousel-item:hover {
+    transform: scale(1.05);
+    box-shadow: 0 10px 20px rgba(0, 123, 255, 0.3);
+}
+
+/* Gradient border effect */
+.carousel-item::before {
+    content: '';
+    position: absolute;
+    top: -2px;
+    left: -2px;
+    right: -2px;
+    bottom: -2px;
+    border-radius: 15px;
+    background: linear-gradient(270deg, blue, green, yellow);
+    background-size: 600% 600%;
+    opacity: 0;
+    z-index: -1;
+    transition: opacity 0.5s;
+}
+
+.carousel-item:hover::before {
+    opacity: 1;
+    animation: gradientGlow 3s ease infinite;
+}
+
+@keyframes gradientGlow {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+}
+
+/* Style for game buttons */
+.game-button {
+    display: none;
+}
+
+/* Style for the game names */
+.game-button span {
+    text-align: center;
+    padding: 10px;
+}
+
+/* Hover effect */
+.game-button:hover {
+    transform: scale(1.05);
+    box-shadow: 0 10px 20px rgba(0, 123, 255, 0.3);
 }
 
 h1 {
-    margin-bottom: 30px;
+    margin-bottom: 50px;
     font-size: 2.5em;
     text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
 }
 
+/* Restore .button-group styles */
 .button-group {
     display: flex;
-    flex-direction: column;
+    flex-wrap: wrap;
     gap: 20px;
+    justify-content: center;
+    padding: 20px;
+    scrollbar-width: none; /* Hide scrollbar */
+    -ms-overflow-style: none;
+    position: relative;
+    z-index: 2;
+}
+
+/* Hide scrollbar for WebKit */
+.button-group::-webkit-scrollbar {
+    display: none;
 }
 
 .btn {
     text-decoration: none;
-    padding: 15px 30px;
-    background: rgba(255, 255, 255, 0.1);
+    padding: 20px 30px;
+    background: rgba(255, 255, 255, 0.2);
     backdrop-filter: blur(10px);
     border: 1px solid rgba(255, 255, 255, 0.3);
     color: #fff;
     position: relative;
     overflow: hidden;
-    border-radius: 5px;
-    box-shadow: 0 5px 10px rgba(0, 0, 0, 0.2);
-    font-size: 1.2em;
-    transition: background-color 0.3s ease, transform 0.3s ease, box-shadow 0.3s ease;
+    border-radius: 15px;
+    box-shadow: 0 8px 15px rgba(0, 0, 0, 0.2);
+    font-size: 1.1em;
+    flex: 1 1 200px;
+    max-width: 300px;
+    text-align: center;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
 }
 
+/* Gradient border effect */
 .btn::before {
     content: '';
     position: absolute;
-    top: -50%;
-    left: -50%;
-    width: 200%;
-    height: 200%;
-    background: linear-gradient(45deg, transparent, rgba(255,255,255,0.2), transparent);
-    transform: rotate(45deg);
+    top: -2px;
+    left: -2px;
+    right: -2px;
+    bottom: -2px;
+    border-radius: 15px;
+    background: linear-gradient(45deg, #ff0066, #ffcc00, #00ccff, #9933ff);
+    background-size: 400% 400%;
     opacity: 0;
+    z-index: -1;
     transition: opacity 0.5s;
 }
 
 .btn:hover::before {
     opacity: 1;
+    animation: gradientGlow 3s ease infinite;
 }
 
 .btn:hover {
-    background-color: #0056b3;
     transform: translateY(-5px);
-    box-shadow: 0 8px 15px rgba(0, 123, 255, 0.3);
+    box-shadow: 0 15px 25px rgba(0, 0, 0, 0.3);
 }
 
 .btn:focus {
     outline: none;
 }
+
+@keyframes gradientGlow {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+}
+
+/* Style the footer */
+footer {
+    text-align: center;
+    padding: 20px;
+    color: #fff;
+    font-size: 1em;
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(5px);
+    border-top: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+/* Remove .game-carousel and .game-card styles */
 
 @media (min-width: 600px) {
     .button-group {
