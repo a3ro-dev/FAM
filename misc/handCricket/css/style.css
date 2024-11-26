@@ -27,7 +27,7 @@
 /* Body */
 body {
     font-family: 'Arial', sans-serif;
-    background: url('/misc/background/games-bg.png') no-repeat center center/cover;
+    background: url('https://media.discordapp.net/attachments/1116703006205956157/1310921582700531783/games-bg.png?ex=6746fa5d&is=6745a8dd&hm=0fc04f282c849f0001bf0bbab35dea85e933d382190d20e022127570ca365b33&=&format=webp&quality=lossless&width=1197&height=671') no-repeat center center fixed;
     margin: 0;
     padding: 0;
     display: flex;

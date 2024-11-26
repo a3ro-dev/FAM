@@ -7,8 +7,57 @@
     <link rel="stylesheet" href="css/styles.css">
 </head>
 <body>
-    <div class="quiz-container">
+    <div id="options-form">
+        <h2>API Helper</h2>
+        <label for="num-questions">Number of Questions:</label>
+        <input type="number" id="num-questions" min="1" max="50" value="10">
+
+        <label for="category">Select Category:</label>
+        <select id="category">
+            <option value="">Any Category</option>
+            <!-- for category keep -->
+            <option value="9">General Knowledge</option>
+            <option value="10">Entertainment: Books</option>
+            <option value="11">Entertainment: Film</option>
+            <option value="12">Entertainment: Music</option>
+            <option value="13">Entertainment: Musicals & Theatres</option>
+            <option value="14">Entertainment: Television</option>
+            <option value="15">Entertainment: Video Games</option>
+            <option value="16">Entertainment: Board Games</option>
+            <option value="17">Science & Nature</option>
+            <option value="18">Science: Computers</option>
+            <option value="19">Science: Mathematics</option>
+            <option value="20">Mythology</option>
+            <option value="21">Sports</option>
+            <option value="22">Geography</option>
+            <option value="23">History</option>
+            <option value="24">Politics</option>
+            <option value="25">Celebrities</option>
+            <option value="27">Animals</option>
+            <option value="28">Vehicles</option>
+        </select>
+
+        <label for="difficulty">Select Difficulty:</label>
+        <select id="difficulty">
+            <option value="">Any Difficulty</option>
+            <option value="easy">Easy</option>
+            <option value="medium">Medium</option>
+            <option value="hard">Hard</option>
+        </select>
+
+        <label for="type">Select Type:</label>
+        <select id="type">
+            <option value="">Any Type</option>
+            <option value="multiple">Multiple Choice</option>
+            <option value="boolean">True / False</option>
+        </select>
+
+        <button onclick="startQuiz()">Start Quiz</button>
+    </div>
+
+    <div class="quiz-container" style="display: none;">
         <div class="scoreboard">Score: <span id="score">0</span></div>
+        <div class="timer">Time Left: <span id="timer">6</span>s</div>
         <div id="question-container" class="question-container">
             <div id="question" class="question"></div>
             <div id="options" class="options"></div>

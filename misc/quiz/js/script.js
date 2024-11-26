@@ -7,11 +7,45 @@ const optionsElement = document.getElementById('options');
 const nextButton = document.getElementById('next');
 let timer;
 
+// Variables to store user's choices
+let numberOfQuestions = 10;
+let category = '';
+let difficulty = '';
+let type = '';
+
+function startQuiz() {
+    // Get user selections
+    numberOfQuestions = document.getElementById('num-questions').value;
+    category = document.getElementById('category').value;
+    difficulty = document.getElementById('difficulty').value;
+    type = document.getElementById('type').value;
+
+    // Hide the options form and show the quiz container
+    document.getElementById('options-form').style.display = 'none';
+    document.querySelector('.quiz-container').style.display = 'block';
+
+    // Fetch questions with the selected options
+    fetchQuestions();
+}
+
 async function fetchQuestions() {
-    const res = await fetch('https://opentdb.com/api.php?amount=10&type=multiple');
-    const data = await res.json();
-    questions = data.results;
-    displayQuestion();
+    const cachedQuestions = localStorage.getItem('questions');
+    if (cachedQuestions) {
+        questions = JSON.parse(cachedQuestions);
+        displayQuestion();
+    } else {
+        // Build the API URL with selected options
+        let apiUrl = `https://opentdb.com/api.php?amount=${numberOfQuestions}`;
+        if (category) apiUrl += `&category=${category}`;
+        if (difficulty) apiUrl += `&difficulty=${difficulty}`;
+        if (type) apiUrl += `&type=${type}`;
+
+        const res = await fetch(apiUrl);
+        const data = await res.json();
+        questions = data.results;
+        localStorage.setItem('questions', JSON.stringify(questions));
+        displayQuestion();
+    }
 }
 
 function displayQuestion() {
@@ -34,15 +68,22 @@ function displayQuestion() {
 }
 
 function startTimer() {
-    timer = setTimeout(() => {
-        highlightCorrectAnswer();
-        score--; // Subtract 1 point for no answer
-        updateScore();
-    }, 6000);
+    let timeLeft = 6;
+    document.getElementById('timer').textContent = timeLeft;
+    timer = setInterval(() => {
+        timeLeft--;
+        document.getElementById('timer').textContent = timeLeft;
+        if (timeLeft <= 0) {
+            clearInterval(timer);
+            highlightCorrectAnswer();
+            score--;
+            updateScore();
+        }
+    }, 1000);
 }
 
 function selectAnswer(button, correctAnswer) {
-    clearTimeout(timer); // Clear the timer when an answer is selected
+    clearInterval(timer);
     const selectedAnswer = button.textContent;
     const correctButton = Array.from(optionsElement.children).find(btn => btn.textContent === correctAnswer);
 
@@ -78,6 +119,7 @@ function nextQuestion() {
 }
 
 function resetState() {
+    clearInterval(timer);
     nextButton.parentElement.style.display = 'none';
     optionsElement.innerHTML = '';
 }
