@@ -109,7 +109,7 @@ class Utilities:
             return ""
         try:
             r = sr.Recognizer()
-            with sr.Microphone() as source:
+            with sr.Microphone(sample_rate=44100) as source:
                 logging.info("Listening for speech...")
                 r.adjust_for_ambient_noise(source, duration=1)
                 audio = r.listen(source)
