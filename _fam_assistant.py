@@ -258,7 +258,6 @@ class FamAssistant:
             logging.error(f"Error in wake word detection loop: {e}")
 
     def on_keyword_detected(self):
-        """Handles the processing after a wake word or gesture is detected."""
         self.is_processing_command = True
         self.util.playChime('success')
         logging.info("Chime played for keyword detection.")
@@ -266,7 +265,8 @@ class FamAssistant:
         if self.music_player.is_playing:
             self.music_player.set_volume(20)
 
-        self.close_audio_stream()
+        # Comment out or remove these lines to avoid conflicts
+        # self.close_audio_stream()
 
         try:
             command = self.util.getSpeech()
@@ -278,7 +278,7 @@ class FamAssistant:
             logging.debug(f"Recognized command: {command}")
         except Exception as e:
             logging.error(f"Error in speech recognition: {e}")
-            self.init_audio_stream()
+            # No need to re-initialize the audio stream here
             self.is_processing_command = False
             return
 
@@ -290,7 +290,8 @@ class FamAssistant:
         if self.music_player.is_playing:
             self.music_player.set_volume(100)
 
-        self.init_audio_stream()
+        # Comment out or remove this line
+        # self.init_audio_stream()
         self.is_processing_command = False
         time.sleep(1)  # Delay before re-enabling gesture detection
 
