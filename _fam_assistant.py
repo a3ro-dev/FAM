@@ -126,8 +126,11 @@ class FamAssistant:
         self.access_key = access_key
         self.keyword_path = keyword_path
         self.music_path = music_path
-        self.porcupine = None
-        self.audio_stream = None
+        # Commented out Porcupine and audio stream initialization
+        # self.porcupine = None
+        # self.audio_stream = None
+        # self.init_porcupine()
+        # self.init_audio_stream()
         self.is_running = False
         self.is_processing_command = False
         self.executor = concurrent.futures.ThreadPoolExecutor(max_workers=3)
@@ -140,9 +143,6 @@ class FamAssistant:
         self.gesture_module = GestureModule()
         self.bt_manager = btm.BluetoothManager()
 
-        # Initialize Porcupine and audio stream
-        self.init_porcupine()
-        self.init_audio_stream()
         logging.info("FamAssistant initialized.")
 
         # Command mappings
@@ -186,35 +186,8 @@ class FamAssistant:
         # Sort command mappings by phrase length (longest first)
         self.command_mappings.sort(key=lambda x: len(x[0]), reverse=True)
 
-    def init_porcupine(self):
-        try:
-            self.porcupine = pvporcupine.create(
-                access_key=self.access_key,
-                keyword_paths=[self.keyword_path]
-            )
-            logging.info("Porcupine initialized.")
-        except Exception as e:
-            logging.error(f"Failed to initialize Porcupine: {e}")
-
-    def init_audio_stream(self):
-        if self.porcupine is None:
-            logging.error("Porcupine is not initialized. Cannot initialize audio stream.")
-            return
-        try:
-            pa = pyaudio.PyAudio()
-            self.audio_stream = pa.open(
-                rate=self.porcupine.sample_rate,
-                channels=1,
-                format=pyaudio.paInt16,
-                input=True,
-                frames_per_buffer=self.porcupine.frame_length
-            )
-            logging.info("Audio stream initialized.")
-        except Exception as e:
-            logging.error(f"Failed to initialize audio stream: {e}")
-
     def start(self):
-        """Start the assistant by initializing gesture and wake word detection threads."""
+        """Start the assistant by initializing gesture detection thread."""
         self.is_running = True
         self.util.playChime('success')
         logging.info("Assistant started.")
@@ -223,9 +196,9 @@ class FamAssistant:
         gesture_thread = threading.Thread(target=self.gesture_detection_loop, daemon=True)
         gesture_thread.start()
 
-        # Start wake word detection thread
-        wake_word_thread = threading.Thread(target=self.wake_word_detection_loop, daemon=True)
-        wake_word_thread.start()
+        # Commented out wake word detection thread
+        # wake_word_thread = threading.Thread(target=self.wake_word_detection_loop, daemon=True)
+        # wake_word_thread.start()
 
     def gesture_detection_loop(self):
         """Continuously detects hand gestures and triggers command processing."""
@@ -237,26 +210,6 @@ class FamAssistant:
         except Exception as e:
             logging.error(f"Error in gesture detection loop: {e}")
 
-    def wake_word_detection_loop(self):
-        """Continuously listens for the wake word and triggers command processing."""
-        try:
-            while self.is_running:
-                if self.is_processing_command:
-                    continue
-
-                if self.porcupine and self.audio_stream:
-                    pcm = self.audio_stream.read(
-                        self.porcupine.frame_length,
-                        exception_on_overflow=False
-                    )
-                    pcm = struct.unpack_from("h" * self.porcupine.frame_length, pcm)
-                    keyword_index = self.porcupine.process(pcm)
-                    if keyword_index >= 0:
-                        logging.info("Wake word detected.")
-                        self.executor.submit(self.on_keyword_detected)
-        except Exception as e:
-            logging.error(f"Error in wake word detection loop: {e}")
-
     def on_keyword_detected(self):
         self.is_processing_command = True
         self.util.playChime('success')
@@ -265,7 +218,7 @@ class FamAssistant:
         if self.music_player.is_playing:
             self.music_player.set_volume(20)
 
-        # Comment out or remove these lines to avoid conflicts
+        # Removed audio stream closing
         # self.close_audio_stream()
 
         try:
@@ -278,7 +231,6 @@ class FamAssistant:
             logging.debug(f"Recognized command: {command}")
         except Exception as e:
             logging.error(f"Error in speech recognition: {e}")
-            # No need to re-initialize the audio stream here
             self.is_processing_command = False
             return
 
@@ -290,7 +242,7 @@ class FamAssistant:
         if self.music_player.is_playing:
             self.music_player.set_volume(100)
 
-        # Comment out or remove this line
+        # Removed audio stream initialization
         # self.init_audio_stream()
         self.is_processing_command = False
         time.sleep(1)  # Delay before re-enabling gesture detection
@@ -426,20 +378,13 @@ class FamAssistant:
             else:
                 self.util.speak("No matching task found.")
 
-    def close_audio_stream(self):
-        """Closes the audio stream safely."""
-        if self.audio_stream:
-            self.audio_stream.stop_stream()
-            self.audio_stream.close()
-            self.audio_stream = None
-            logging.info("Audio stream closed.")
-
     def stop(self):
         """Stops the assistant and cleans up resources."""
         self.is_running = False
-        self.close_audio_stream()
-        if self.porcupine:
-            self.porcupine.delete()
+        # Removed audio stream closure
+        # self.close_audio_stream()
+        # if self.porcupine:
+        #     self.porcupine.delete()
         self.music_player.stop_music()
         self.gesture_module.stop()
         logging.info("Assistant stopped.")
