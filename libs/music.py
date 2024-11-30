@@ -3,9 +3,9 @@ import random
 import threading
 import time
 import logging
-import pygame
 import libs.pygame_manager as pygame_manager
 import libs.utilities as utilities
+import difflib
 
 # Configure logging
 logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -26,9 +26,9 @@ class MusicPlayer:
         self.thread = None
         logging.info("MusicPlayer initialized with directory: %s", music_directory)
 
-        # Initialize pygame mixer and setup an event for track end
-        pygame.mixer.init()
-        pygame.mixer.music.set_endevent(pygame.USEREVENT)  # Custom event when song ends
+        # Initialize mixer and set up end event using pygame_manager
+        pygame_manager.PygameManager.initialize()
+        pygame_manager.PygameManager.set_end_event()
 
     def load_playlist(self) -> set:
         if not os.path.isdir(self.music_directory):
@@ -53,13 +53,13 @@ class MusicPlayer:
             self._play_current_song()
 
         while self.is_playing:
-            # Wait for an event indicating the song has finished
-            for event in pygame.event.get():
-                if event.type == pygame.USEREVENT:  # Song has ended
+            # Wait for events using pygame_manager
+            events = pygame_manager.PygameManager.get_events()
+            for event in events:
+                if event.type == pygame_manager.PygameManager.END_EVENT:
                     logging.info("Song finished, moving to next track.")
                     self.play_next()
-
-            time.sleep(1)  # Give the loop a small delay to avoid high CPU usage
+            time.sleep(1)
 
     def _play_current_song(self):
         retries = 2  # Try 3 times to play a song before skipping
@@ -79,7 +79,7 @@ class MusicPlayer:
                 self.is_playing = True
                 logging.info("Playing song: %s", current_song)
                 break
-            except pygame.error as e:
+            except pygame_manager.PygameManager.PygameError as e:
                 logging.error("Error playing music: %s. Retries left: %d", e, retries)
                 retries -= 1
                 time.sleep(1)  # Short delay before retrying
@@ -103,14 +103,14 @@ class MusicPlayer:
     def pause_music(self):
         with self.lock:
             if self.is_playing and not self.is_paused:
-                pygame.mixer.music.pause()
+                pygame_manager.PygameManager.pause()
                 self.is_paused = True
                 logging.info("Music paused.")
 
     def unpause_music(self):
         with self.lock:
             if self.is_playing and self.is_paused:
-                pygame.mixer.music.unpause()
+                pygame_manager.PygameManager.unpause()
                 self.is_paused = False
                 logging.info("Music unpaused.")
 
@@ -132,9 +132,28 @@ class MusicPlayer:
 
     def seek_forward(self, seconds: int):
         if self.is_playing:
-            current_pos = pygame.mixer.music.get_pos() / 1000
+            current_pos = pygame_manager.PygameManager.get_position()
             try:
-                pygame.mixer.music.set_pos(current_pos + seconds)
+                pygame_manager.PygameManager.set_position(current_pos + seconds)
                 logging.info("Seeked forward by %d seconds", seconds)
-            except pygame.error as e:
+            except pygame_manager.PygameManager.PygameError as e:
                 logging.error("Error seeking forward: %s", e)
+
+    def play_specific_song(self, song_name: str) -> bool:
+        """Attempt to play a specific song by name."""
+        with self.lock:
+            song_list = {os.path.splitext(os.path.basename(song))[0]: song for song in self.playlist}
+            if song_name in song_list:
+                song_path = song_list[song_name]
+            else:
+                close_matches = difflib.get_close_matches(song_name, song_list.keys(), n=1, cutoff=0.8)
+                if close_matches:
+                    song_path = song_list[close_matches[0]]
+                else:
+                    logging.info(f"Song '{song_name}' not found.")
+                    return False
+            pygame_manager.PygameManager.load_and_play(song_path)
+            self.is_playing = True
+            self.is_paused = False
+            logging.info("Playing specific song: %s", song_path)
+            return True

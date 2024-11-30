@@ -11,7 +11,7 @@ fuzzywuzzy
 pyyaml
 gTTS
 groq
-wikipedia-api
+httpx==0.24.1
 numpy
 RPi.GPIO
 pyttsx3

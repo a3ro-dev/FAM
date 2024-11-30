@@ -24,10 +24,14 @@ class PygameManager:
     """
     _initialized = False
 
+    END_EVENT = pygame.USEREVENT  # Define custom event for song end
+    PygameError = pygame.error    # Alias for pygame.error
+
     @classmethod
     def initialize(cls):
         if not cls._initialized:
             logging.info("Initializing pygame mixer...")
+            pygame.init()
             pygame.mixer.init(buffer=1024)
             cls._initialized = True
             logging.info("Pygame mixer initialized.")
@@ -40,6 +44,36 @@ class PygameManager:
         pygame.mixer.music.load(file_path)
         pygame.mixer.music.play()
         logging.info("Music started playing.")
+
+    @classmethod
+    def set_end_event(cls):
+        pygame.mixer.music.set_endevent(cls.END_EVENT)
+        logging.info("Music end event set.")
+
+    @classmethod
+    def get_events(cls):
+        return pygame.event.get()
+
+    @classmethod
+    def pause(cls):
+        pygame.mixer.music.pause()
+        logging.info("Music paused.")
+
+    @classmethod
+    def unpause(cls):
+        pygame.mixer.music.unpause()
+        logging.info("Music unpaused.")
+
+    @classmethod
+    def get_position(cls):
+        pos = pygame.mixer.music.get_pos() / 1000.0  # Convert milliseconds to seconds
+        logging.info(f"Current music position: {pos} seconds")
+        return pos
+
+    @classmethod
+    def set_position(cls, pos_in_seconds):
+        pygame.mixer.music.play(start=pos_in_seconds)
+        logging.info(f"Music position set to {pos_in_seconds} seconds")
 
     @classmethod
     def stop(cls):
