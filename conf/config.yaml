@@ -5,6 +5,7 @@ main:
     openai_api_key: "sk-proj-K8hfsSF9vbG1ccu7Mo50T3BlbkFJXB6nXSORFrhYVjkzTWaR"
     model_name: "llama3-70b-8192"
     eleven_labs_api_key: "sk_d75e31d1462f955bca620c90ebf6de3d1dfe8ad2921c88ce"
+    erpapi_api_key: "48a885db2fcd95e6972fc0d2610bd2be32d626d208621182a0a3a1255d122bf6"
 utilities:
     author: "AKSHAT SINGH KUSHWAHA"
     audio_files:
