@@ -19,8 +19,9 @@ import libs.gpt as gpt
 import libs.music as musicP
 import libs.music_search as musicSearch
 import libs.clock as clock
-import libs.bluetooth_manager as btm
+import libs.raspotify_wrapper as btm
 import libs.games
+import libs.raspotify_wrapper as rspw  # Update the import
 
 # Initialize logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -126,11 +127,6 @@ class FamAssistant:
         self.access_key = access_key
         self.keyword_path = keyword_path
         self.music_path = music_path
-        # Commented out Porcupine and audio stream initialization
-        # self.porcupine = None
-        # self.audio_stream = None
-        # self.init_porcupine()
-        # self.init_audio_stream()
         self.is_running = False
         self.is_processing_command = False
         self.executor = concurrent.futures.ThreadPoolExecutor(max_workers=3)
@@ -141,18 +137,12 @@ class FamAssistant:
         self.util = Utilities.Utilities()
         self.gpt = gpt.Generation()
         self.gesture_module = GestureModule()
-        self.bt_manager = btm.BluetoothManager()
+        self.raspotify_wrapper = rspw.RaspotifyWrapper()
 
         logging.info("FamAssistant initialized.")
 
         # Command mappings
         self.command_mappings = [
-            ("start bluetooth mode", self.handle_start_bluetooth_mode),
-            ("enable bluetooth mode", self.handle_start_bluetooth_mode),
-            ("bluetooth speaker mode", self.handle_start_bluetooth_mode),
-            ("stop bluetooth mode", self.handle_stop_bluetooth_mode),
-            ("disable bluetooth mode", self.handle_stop_bluetooth_mode),
-            ("exit bluetooth speaker mode", self.handle_stop_bluetooth_mode),
             ("start my day", self.handle_start_my_day),
             ("good morning", self.handle_start_my_day),
             ("what time is it", self.handle_time),
@@ -182,6 +172,14 @@ class FamAssistant:
             ("resume", self.handle_resume_music),
             ("stop", self.handle_stop_music),
             ("shutdown", self.handle_shutdown),
+            ("enable raspotify", self.handle_enable_raspotify),
+            ("start raspotify", self.handle_enable_raspotify),
+            ("enable spotify", self.handle_enable_raspotify),
+            ("enable discovery", self.handle_enable_raspotify),
+            ("disable raspotify", self.handle_disable_raspotify),
+            ("stop raspotify", self.handle_disable_raspotify),
+            ("disable spotify", self.handle_disable_raspotify),
+            ("disable discovery", self.handle_disable_raspotify),
         ]
         # Sort command mappings by phrase length (longest first)
         self.command_mappings.sort(key=lambda x: len(x[0]), reverse=True)
@@ -254,7 +252,36 @@ class FamAssistant:
             if phrase in command:
                 handler(command)
                 return
+
+        # Fuzzy matching with known commands
+        phrases = [phrase for phrase, _ in self.command_mappings]
+        close_matches = difflib.get_close_matches(command, phrases, n=1, cutoff=0.7)
+        if close_matches:
+            matched_phrase = close_matches[0]
+            self.util.speak(f"Did you mean {matched_phrase}?")
+            confirmation = self.util.getSpeech()
+            if confirmation and 'yes' in confirmation.lower():
+                for phrase, handler in self.command_mappings:
+                    if phrase == matched_phrase:
+                        handler(command)
+                        return
         self.handle_unknown_command(command)
+
+    def handle_play_music(self, _command):
+        self.util.speak("Play specific song or playlist?")
+        response = self.util.getSpeech()
+        if response:
+            response = response.lower()
+            if 'playlist' in response:
+                self.music_player.play_music_thread()
+            else:
+                song_name = response
+                if not self.music_player.play_specific_song(song_name):
+                    self.util.speak(f"Song '{song_name}' not found locally, attempting to download.")
+                    self.handle_download(f"download {song_name}")
+                    self.music_player.play_specific_song(song_name)
+        else:
+            self.music_player.play_music_thread()
 
     # Handler methods
     def handle_greeting(self, _command):
@@ -285,9 +312,6 @@ class FamAssistant:
                 ["/home/pi/FAM/env/bin/python3", "/home/pi/FAM/libs/music_search.py", song_name]
             )
             self.util.speak(f"{song_name} downloaded successfully.")
-
-    def handle_play_music(self, _command):
-        self.music_player.play_music_thread()
 
     def handle_pause_music(self, _command):
         self.repSpeak('/home/pi/FAM/tts_audio_files/Pausing_music___.mp3')
@@ -333,13 +357,13 @@ class FamAssistant:
         self.games.stop_game()
         self.repSpeak('/home/pi/FAM/tts_audio_files/game_over.mp3')
 
-    def handle_start_bluetooth_mode(self, _command):
-        self.bt_manager.start_bluetooth_mode()
-        self.util.speak("Bluetooth mode started. The device is now acting as a Bluetooth speaker.")
+    def handle_enable_raspotify(self, _command):
+        self.raspotify_wrapper.enable_raspotify()
+        self.util.speak("Raspotify enabled. The device is now acting as a Spotify Connect device.")
 
-    def handle_stop_bluetooth_mode(self, _command):
-        self.bt_manager.stop_bluetooth_mode()
-        self.util.speak("Bluetooth mode stopped.")
+    def handle_disable_raspotify(self, _command):
+        self.raspotify_wrapper.disable_raspotify()
+        self.util.speak("Raspotify disabled.")
 
     def handle_unknown_command(self, command):
         logging.info(f"Handling unknown command: {command}")

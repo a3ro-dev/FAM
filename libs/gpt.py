@@ -7,6 +7,7 @@ import yaml
 import subprocess
 from functools import lru_cache
 from difflib import SequenceMatcher
+from typing import Optional
 
 with open('conf/config.yaml', 'r') as file:
     config = yaml.safe_load(file)
@@ -19,7 +20,7 @@ class Generation:
         self.max_messages = 10
         self.client = Groq(api_key=groqKey)
 
-    def encode_image(self, image_path: str):
+    def encode_image(self, image_path: str) -> str:
         with open(image_path, "rb") as image:
             encoded_image = base64.b64encode(image.read()).decode("utf-8")
         return encoded_image
@@ -39,9 +40,9 @@ class Generation:
         )
 
         response = completion.choices[0].message.content
-        return str(response)
+        return str(response) if response is not None else ""
     
-    def generate_text_with_image(self, text: str, image: str):
+    def generate_text_with_image(self, text: str, image: str) -> str:
         api_key = openaiKey
         base64_image = self.encode_image(image)
 
@@ -67,58 +68,60 @@ class Generation:
         response = requests.post("https://api.openai.com/v1/chat/completions", headers=headers, json=payload)
         return response.json()['choices'][0]['message']['content']
     
-    def live_chat_with_ai(self, text: str):
+    def live_chat_with_ai(self, text: str) -> str:
         current_time_date = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         system_message = (
             f"Current time and date: {current_time_date}. "
             "You are Fam, an AI voice assistant created by Akshat Singh Kushwaha. "
-            "Provide correct and factual answers, and use the available tools when necessary. "
-            "Use 'SEARCH_WIKIPEDIA <query>' to search Wikipedia, "
-            "'SEARCH_DUCKDUCKGO <query>' for a web search, "
-            "'RUN_PYTHON_CODE' followed by code to execute Python code, "
-            "Respond thoroughly and do not hesitate to use tokens."
+            "When you need up-to-date information, use 'SEARCH_WEB <query>' to search the web. "
+            "Integrate any provided search results into your responses without mentioning that you used a search. "
+            "Provide correct and factual answers, and utilize available tools when necessary. "
+            "Respond thoroughly without stating any limitations or knowledge cutoffs."
         )
 
-        self.messages.append({"role": "system", "content": system_message})
+        self.messages = [{"role": "system", "content": system_message}]
         self.messages.append({"role": "user", "content": text})
 
-        completion = self.client.chat.completions.create(
-            model="mixtral-8x7b-32768",
-            messages=self.messages,
-            temperature=0.7,
-            max_tokens=2048,
-            top_p=1,
-            stream=False,
-            stop=None,
-        )
+        last_response = ""
+        while True:
+            completion = self.client.chat.completions.create(
+                model="mixtral-8x7b-32768",
+                messages=self.messages,
+                temperature=0.7,
+                max_tokens=2048,
+                top_p=1,
+                stream=False,
+                stop=None,
+            )
 
-        response = completion.choices[0].message.content
+            response = completion.choices[0].message.content
+            if response is None:
+                return ""
 
-        # Process special commands in the assistant's response
-        if "SEARCH_WIKIPEDIA" in response:
-            search_term = self.extract_command_argument(response, "SEARCH_WIKIPEDIA")
-            wiki_summary = self.search_wikipedia(search_term)
-            response = response.replace(f"SEARCH_WIKIPEDIA {search_term}", wiki_summary)
-            return self.live_chat_with_ai(f"{text}\n\n{wiki_summary}")
-
-        if "SEARCH_DUCKDUCKGO" in response:
-            search_term = self.extract_command_argument(response, "SEARCH_DUCKDUCKGO")
-            duckduckgo_summary = self.search_duckduckgo(search_term)
-            response = response.replace(f"SEARCH_DUCKDUCKGO {search_term}", duckduckgo_summary)
-            return self.live_chat_with_ai(f"{text}\n\n{duckduckgo_summary}")
-
-        if "RUN_PYTHON_CODE" in response:
-            code_to_run = self.extract_code(response)
-            code_output = self.run_python_code(code_to_run)
-            response = response.replace(f"RUN_PYTHON_CODE\n{code_to_run}", code_output)
-            return self.live_chat_with_ai(f"{text}\n\n{code_output}")
-
-        self.messages.append({"role": "assistant", "content": response})
-        return response
-
-    def extract_command_argument(self, response: str, command: str) -> str:
+            # Process special commands in the assistant's response
+            if "SEARCH_WEB" in response:
+                search_term = self.extract_command_argument(response, "SEARCH_WEB")
+                if search_term:
+                    web_summary = self.search_web(search_term)
+                    self.messages.append({"role": "assistant", "content": response})
+                    # Add the search results to the conversation in a way that encourages integration
+                    self.messages.append({"role": "user", "content": f"{web_summary}"})
+                    continue  # Generate a new response with the search results
+            else:
+                # Prevent infinite loops by checking for similar responses
+                if self.is_similar_response(response, last_response):
+                    self.messages.append({"role": "assistant", "content": response})
+                    return response
+                last_response = response
+                self.messages.append({"role": "assistant", "content": response})
+                return response
+    def extract_command_argument(self, response: str, command: str) -> Optional[str]:
+        if not response:
+            return None
         # Extract the argument following the command
         start = response.find(command) + len(command)
+        if start < len(command):  # Command not found
+            return None
         end = response.find("\n", start)
         if end == -1:
             end = len(response)
@@ -136,30 +139,47 @@ class Generation:
             return page.summary[:200]  # Limit the summary to 200 characters
         else:
             return "Sorry, I couldn't find any information on Wikipedia for that topic."
-    
-    @lru_cache(maxsize=32)
-    def search_duckduckgo(self, query: str) -> str:
-        url = "https://api.duckduckgo.com/"
-        params = {
-            "q": query,
-            "format": "json",
-            "no_html": 1,
-            "skip_disambig": 1
-        }
-        response = requests.get(url, params=params)
-        data = response.json()
-
-        if "AbstractText" in data and data["AbstractText"]:
-            return data["AbstractText"]
-        elif "RelatedTopics" in data and data["RelatedTopics"]:
-            return data["RelatedTopics"][0]["Text"]
-        else:
-            return "Sorry, I couldn't find any information on that topic."
-    
-    def extract_code(self, response: str) -> str:
+            
+    def extract_code(self, response: str) -> Optional[str]:
+        if not response:
+            return None
         start = response.find("```") + 3
         end = response.rfind("```")
-        return response[start:end].strip()
+        return response[start:end].strip() if start > 3 and end > start else None
+ 
+    def search_web(self, query: str) -> str:
+        import requests
+
+        api_key = config['main']['serpapi_api_key']
+        params = {
+            "engine": "google",
+            "q": query,
+            "api_key": api_key,
+        }
+
+        try:
+            response = requests.get("https://serpapi.com/search", params=params, timeout=10)
+            data = response.json()
+
+            if "error" in data:
+                return f"Search error: {data['error']}"
+
+            snippets = []
+            if "answer_box" in data and "snippet" in data["answer_box"]:
+                snippets.append(data["answer_box"]["snippet"])
+            elif "organic_results" in data:
+                for result in data["organic_results"][:3]:
+                    snippet = result.get("snippet") or result.get("title")
+                    if snippet:
+                        snippets.append(snippet)
+
+            if snippets:
+                return "\n\n".join(snippets)
+            else:
+                return "No relevant results found."
+
+        except Exception as e:
+            return f"An error occurred during web search: {str(e)}"
     
     def run_python_code(self, code: str) -> str:
         try:
@@ -172,3 +192,6 @@ class Generation:
             return result.stdout.strip()
         except subprocess.CalledProcessError as e:
             return f"Error: {e}"
+        
+gpt = Generation()
+print(gpt.live_chat_with_ai("web search who won 2024 usa elections"))
