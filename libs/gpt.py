@@ -74,7 +74,7 @@ class Generation:
             f"Current time and date: {current_time_date}. "
             "You are Fam, an AI voice assistant created by Akshat Singh Kushwaha. "
             "When you need up-to-date information, use 'SEARCH_WEB <query>' to search the web. "
-            "Integrate any provided search results into your responses without mentioning that you used a search. "
+            "Replace the 'SEARCH_WEB <query>' command in your response with the actual search results. "
             "Provide correct and factual answers, and utilize available tools when necessary. "
             "Respond thoroughly without stating any limitations or knowledge cutoffs."
         )
@@ -103,10 +103,12 @@ class Generation:
                 search_term = self.extract_command_argument(response, "SEARCH_WEB")
                 if search_term:
                     web_summary = self.search_web(search_term)
-                    self.messages.append({"role": "assistant", "content": response})
-                    # Add the search results to the conversation in a way that encourages integration
-                    self.messages.append({"role": "user", "content": f"{web_summary}"})
-                    continue  # Generate a new response with the search results
+                    # Replace the command with the search results
+                    modified_response = response.replace(f"SEARCH_WEB {search_term}", web_summary)
+                    self.messages.append({"role": "assistant", "content": modified_response})
+                    # Continue the loop to allow the assistant to refine its response if needed
+                    last_response = modified_response
+                    continue
             else:
                 # Prevent infinite loops by checking for similar responses
                 if self.is_similar_response(response, last_response):
@@ -115,19 +117,23 @@ class Generation:
                 last_response = response
                 self.messages.append({"role": "assistant", "content": response})
                 return response
+
     def extract_command_argument(self, response: str, command: str) -> Optional[str]:
         if not response:
             return None
-        # Extract the argument following the command
-        start = response.find(command) + len(command)
-        if start < len(command):  # Command not found
+        # Make command detection case-insensitive and trim whitespace
+        command_lower = command.lower()
+        response_lower = response.lower()
+        start = response_lower.find(command_lower)
+        if start == -1:
             return None
+        start += len(command)
         end = response.find("\n", start)
         if end == -1:
             end = len(response)
         return response[start:end].strip()
 
-    def is_similar_response(self, new_response: str, last_response: str, threshold: float = 0.9) -> bool:
+    def is_similar_response(self, new_response: str, last_response: str, threshold: float = 0.98) -> bool:
         similarity = SequenceMatcher(None, new_response, last_response).ratio()
         return similarity > threshold
 
