@@ -199,5 +199,3 @@ class Generation:
         except subprocess.CalledProcessError as e:
             return f"Error: {e}"
         
-gpt = Generation()
-print(gpt.live_chat_with_ai("web search who won 2024 usa elections"))
