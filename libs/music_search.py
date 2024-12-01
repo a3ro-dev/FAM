@@ -7,7 +7,10 @@ from moviepy.editor import AudioFileClip
 from youtube_search import YoutubeSearch
 from fuzzywuzzy import fuzz
 import yaml
-from typing import Optional
+from typing import Optional, Set
+import spotipy
+from spotipy.oauth2 import SpotifyClientCredentials
+import time
 
 # Load configuration
 with open('conf/config.yaml') as file:
@@ -49,6 +52,31 @@ class MusicSearch:
         config = load_config(CONFIG_PATH)
         self.output_path = config['main']['music_path']
         self.executor = concurrent.futures.ThreadPoolExecutor()
+        
+        # Initialize Spotify client with config values
+        self.sp = spotipy.Spotify(auth_manager=SpotifyClientCredentials(
+            client_id=config['spotify']['client_id'],
+            client_secret=config['spotify']['client_secret']
+        ))
+        
+        self.rate_limit_window = 60  # 60 seconds window
+        self.max_requests = 100      # max 100 requests per window
+        self.request_timestamps: list = []
+
+    def _check_rate_limit(self):
+        """Implements rate limiting for API requests"""
+        current_time = time.time()
+        # Remove timestamps older than the window
+        self.request_timestamps = [ts for ts in self.request_timestamps 
+                                 if current_time - ts < self.rate_limit_window]
+        
+        if len(self.request_timestamps) >= self.max_requests:
+            sleep_time = self.request_timestamps[0] + self.rate_limit_window - current_time
+            if sleep_time > 0:
+                logging.info(f"Rate limit reached, sleeping for {sleep_time:.2f} seconds")
+                time.sleep(sleep_time)
+        
+        self.request_timestamps.append(current_time)
 
     def shutdown(self):
         self.executor.shutdown(wait=True)
@@ -111,6 +139,72 @@ class MusicSearch:
         if video_path:
             return self.convert_to_mp3(video_path)
         return None
+
+    def get_playlist_tracks(self, playlist_url):
+        """Get all tracks from a Spotify playlist."""
+        playlist_id = playlist_url.split('/')[-1].split('?')[0]
+        results = self.sp.playlist_tracks(playlist_id)
+        tracks = []
+        
+        while results:
+            for item in results['items']:
+                track = item['track']
+                track_name = f"{track['name']} - {', '.join([artist['name'] for artist in track['artists']])}"
+                tracks.append(track_name)
+            
+            if results['next']:
+                results = self.sp.next(results)
+            else:
+                results = None
+                
+        return tracks
+
+    def sync_playlist(self, playlist_url):
+        """Sync local music directory with Spotify playlist with rate limiting and error handling."""
+        try:
+            # Get current playlist tracks
+            self._check_rate_limit()
+            playlist_tracks = set(self.get_playlist_tracks(playlist_url))
+            
+            if not playlist_tracks:
+                logging.error("No tracks found in playlist or failed to fetch playlist")
+                return
+
+            # Get current local files
+            try:
+                local_files = {os.path.splitext(f)[0] for f in os.listdir(self.output_path) 
+                             if f.endswith(MUSIC_EXTENSIONS)}
+            except OSError as e:
+                logging.error(f"Failed to read music directory: {e}")
+                return
+
+            tracks_to_add = playlist_tracks - local_files
+            tracks_to_remove = local_files - playlist_tracks
+
+            # Remove tracks not in playlist
+            for track in tracks_to_remove:
+                try:
+                    for ext in MUSIC_EXTENSIONS:
+                        file_path = os.path.join(self.output_path, f"{track}{ext}")
+                        if os.path.exists(file_path):
+                            os.remove(file_path)
+                            logging.info(f"Removed: {track}")
+                except OSError as e:
+                    logging.error(f"Failed to remove {track}: {e}")
+
+            # Download new tracks with delay and rate limiting
+            for track in tracks_to_add:
+                try:
+                    logging.info(f"Downloading: {track}")
+                    self._check_rate_limit()
+                    self.search_and_download_music(track)
+                    time.sleep(2)  # 2-second delay between downloads
+                except Exception as e:
+                    logging.error(f"Failed to download {track}: {e}")
+                    continue
+
+        except Exception as e:
+            logging.error(f"Playlist sync failed: {e}")
 
 def main():
     parser = argparse.ArgumentParser(description='Search and download a song.')

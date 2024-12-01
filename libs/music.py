@@ -6,6 +6,7 @@ import logging
 import libs.pygame_manager as pygame_manager
 import libs.utilities as utilities
 import difflib
+import libs.music_search as music_search
 
 # Configure logging
 logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -24,11 +25,17 @@ class MusicPlayer:
         self.lock = threading.Lock()
         self.utils = utilities.Utilities()
         self.thread = None
+        self.music_search = music_search.MusicSearch()
         logging.info("MusicPlayer initialized with directory: %s", music_directory)
 
         # Initialize mixer and set up end event using pygame_manager
         pygame_manager.PygameManager.initialize()
         pygame_manager.PygameManager.set_end_event()
+
+        # Start playlist sync in a separate thread
+        self.spotify_playlist_url = "https://open.spotify.com/playlist/1R6uk3la3pREY7xF7jdvnY"
+        sync_thread = threading.Thread(target=self._sync_playlist)
+        sync_thread.start()
 
     def load_playlist(self) -> set:
         if not os.path.isdir(self.music_directory):
@@ -157,3 +164,22 @@ class MusicPlayer:
             self.is_paused = False
             logging.info("Playing specific song: %s", song_path)
             return True
+
+    def _sync_playlist(self):
+        """Sync the music directory with Spotify playlist."""
+        max_retries = 3
+        retry_delay = 5
+
+        for attempt in range(max_retries):
+            try:
+                self.music_search.sync_playlist(self.spotify_playlist_url)
+                logging.info("Playlist sync completed successfully")
+                break
+            except Exception as e:
+                logging.error(f"Sync attempt {attempt + 1} failed: {e}")
+                if attempt < max_retries - 1:
+                    time.sleep(retry_delay)
+                    retry_delay *= 2  # Exponential backoff
+            finally:
+                if hasattr(music_search, 'shutdown'):
+                    self.music_search.shutdown()

@@ -19,3 +19,4 @@ nltk
 openai
 pydub
 python-Levenshtein
+spotipy
