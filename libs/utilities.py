@@ -1,7 +1,6 @@
 import libs.gpt as gpt
 import random
 import time
-import cv2
 import speech_recognition as sr
 from functools import lru_cache
 import yaml
