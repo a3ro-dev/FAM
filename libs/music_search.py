@@ -101,17 +101,26 @@ class MusicSearch:
             return None
 
     def download_audio(self, url: str) -> Optional[str]:
-        try:
-            yt = YouTube(url)
-            audio_stream = yt.streams.filter(only_audio=True).first()
-            if audio_stream is None:
-                logging.info(f"No audio streams found for {url}")
-                return None
-            audio_stream.download(self.output_path)
-            return os.path.join(self.output_path, audio_stream.default_filename)
-        except Exception as e:
-            logging.error(f"Error downloading audio: {e}")
-            return None
+        max_retries = 3
+        retry_delay = 2
+
+        for attempt in range(max_retries):
+            try:
+                yt = YouTube(url)
+                audio_stream = yt.streams.filter(only_audio=True).first()
+                if audio_stream is None:
+                    logging.info(f"No audio streams found for {url}")
+                    return None
+                audio_stream.download(self.output_path)
+                return os.path.join(self.output_path, audio_stream.default_filename)
+            except Exception as e:
+                logging.error(f"Error downloading audio (attempt {attempt + 1}/{max_retries}): {e}")
+                if attempt < max_retries - 1:
+                    time.sleep(retry_delay)
+                    retry_delay *= 2  # Exponential backoff
+                else:
+                    logging.error("Max retries reached, download failed")
+                    return None
 
     def convert_to_mp3(self, video_path: str) -> Optional[str]:
         try:

@@ -66,16 +66,23 @@ class GestureModule:
             GPIO.output(self.trigger_pin, False)
 
             start_time = time.time()
-            timeout = start_time + 0.02  # 20 ms timeout
+            stop_time = start_time  # Initialize stop_time with default value
+            timeout = start_time + 0.02  # 20ms timeout
 
+            # Wait for echo to start
             while GPIO.input(self.echo_pin) == 0 and time.time() < timeout:
                 start_time = time.time()
 
+            # Wait for echo to end
             while GPIO.input(self.echo_pin) == 1 and time.time() < timeout:
                 stop_time = time.time()
 
+            if time.time() >= timeout:
+                logging.debug("Distance measurement timed out")
+                return None
+
             time_elapsed = stop_time - start_time
-            distance = (time_elapsed * 34300) / 2
+            distance = (time_elapsed * 34300) / 2  # Speed of sound = 343 m/s
 
             return distance
         except Exception as e:
