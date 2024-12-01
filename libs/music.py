@@ -18,7 +18,9 @@ class MusicPlayer:
     def __init__(self, music_directory: str, shuffle: bool = False):
         self.music_directory = music_directory
         self.shuffle = shuffle
-        self.playlist = self.load_playlist()
+        self.playlist = list(self.load_playlist())  # Convert set to list immediately
+        if self.shuffle:
+            random.shuffle(self.playlist)
         self.current_index = 0
         self.is_playing = False
         self.is_paused = False
@@ -37,10 +39,11 @@ class MusicPlayer:
         sync_thread = threading.Thread(target=self._sync_playlist)
         sync_thread.start()
 
-    def load_playlist(self) -> set:
+    def load_playlist(self) -> list:
         if not os.path.isdir(self.music_directory):
             raise ValueError(f"Invalid directory: {self.music_directory}")
-        playlist = {os.path.join(self.music_directory, f) for f in os.listdir(self.music_directory) if f.endswith(MUSIC_EXTENSIONS)}
+        playlist = [os.path.join(self.music_directory, f) for f in os.listdir(self.music_directory) 
+                   if f.endswith(MUSIC_EXTENSIONS)]
         logging.info("Playlist loaded with %d files", len(playlist))
         return playlist
 
@@ -50,30 +53,27 @@ class MusicPlayer:
                 logging.warning("No music files found in the directory.")
                 return
 
-            if self.shuffle:
-                self.playlist = list(self.playlist)
-                random.shuffle(self.playlist)
-                self.playlist = set(self.playlist)
-
             self.is_playing = True
             self.is_paused = False
             self._play_current_song()
 
         while self.is_playing:
-            # Wait for events using pygame_manager
             events = pygame_manager.PygameManager.get_events()
             for event in events:
                 if event.type == pygame_manager.PygameManager.END_EVENT:
-                    logging.info("Song finished, moving to next track.")
-                    self.play_next()
-            time.sleep(1)
+                    with self.lock:
+                        if self.is_playing:  # Check if we're still supposed to be playing
+                            logging.info("Song finished, moving to next track.")
+                            self.play_next()
+            time.sleep(0.1)  # Reduced sleep time for more responsive event handling
 
     def _play_current_song(self):
         retries = 2  # Try 3 times to play a song before skipping
         while retries > 0:
             try:
-                current_song = list(self.playlist)[self.current_index]
+                current_song = self.playlist[self.current_index]  # Now using list indexing
                 pygame_manager.PygameManager.load_and_play(current_song)
+                pygame_manager.PygameManager.set_end_event()  # Ensure end event is set for each song
                 time.sleep(1)  # Ensure music starts playing
                 song_name = os.path.basename(current_song)
                 song_name_without_extension = os.path.splitext(song_name)[0]
@@ -102,6 +102,8 @@ class MusicPlayer:
 
     def play_next(self):
         with self.lock:
+            if not self.playlist:
+                return
             # Move to the next song or loop back if it's the end of the playlist
             self.current_index = (self.current_index + 1) % len(self.playlist)
             logging.info("Moving to next song: index %d", self.current_index)
