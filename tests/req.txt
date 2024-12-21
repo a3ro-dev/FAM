@@ -1,2 +1,0 @@
-adafruit-circuitpython-neopixel
-Adafruit-Blinka
