@@ -1,6 +1,15 @@
-# Fam Assistant
+# FAM Assistant 🚀
 
-A voice and gesture-controlled AI assistant optimized for Raspberry Pi Zero 2W. It provides music playback, task management, game hosting, and GPT-powered conversations.
+## Table of Contents
+- [Features](#features)
+- [Technical Details](#technical-details)
+- [Setup](#setup)
+- [Usage](#usage)
+- [Gesture Control](#gesture-control)
+- [Project Structure](#project-structure)
+- [Development](#development)
+- [License](#license)
+- [Support](#support)
 
 ## Features
 
