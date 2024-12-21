@@ -4,7 +4,7 @@ import threading
 from _fam_assistant import FamAssistant
 
 def load_config():
-    with open('conf/config.yaml') as file:
+    with open('conf/secrets.yaml') as file:
         return yaml.safe_load(file)
 
 def main():

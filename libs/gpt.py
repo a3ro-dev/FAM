@@ -9,7 +9,7 @@ from functools import lru_cache
 from difflib import SequenceMatcher
 from typing import Optional
 
-with open('conf/config.yaml', 'r') as file:
+with open('conf/secrets.yaml', 'r') as file:
     config = yaml.safe_load(file)
 groqKey = config['main']['groq_api_key']
 openaiKey = config['main']['openai_api_key']

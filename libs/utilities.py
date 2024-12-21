@@ -36,14 +36,13 @@ import openai
 import subprocess
 from pydub import AudioSegment  # type: ignore
 import uuid
-import os
 import logging
 
 # Configure logging
 logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
 
 # Load configuration
-with open('conf/config.yaml') as file:
+with open('conf/secrets.yaml') as file:
     config = yaml.safe_load(file)
 
 emailID = config['utilities']['email']['sender_email']

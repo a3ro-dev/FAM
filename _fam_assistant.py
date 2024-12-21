@@ -1,7 +1,4 @@
-import pyaudio
-import pvporcupine 
 import threading
-import struct
 import sys
 import subprocess
 import socket

@@ -13,7 +13,7 @@ from spotipy.oauth2 import SpotifyClientCredentials
 import time
 
 # Load configuration
-with open('conf/config.yaml') as file:
+with open('conf/secrets.yaml') as file:
     config = yaml.safe_load(file)
 
 # Constants for configuration keys and file extensions
