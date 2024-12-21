@@ -44,3 +44,20 @@ carousel.addEventListener('mouseout', () => {
     scrollTimer = setInterval(autoScroll, 3000);
 });
 */
+
+// // Add click handlers for all buttons
+// document.addEventListener('DOMContentLoaded', () => {
+//     const buttons = document.querySelectorAll('.btn');
+//     buttons.forEach(button => {
+//         button.addEventListener('click', (e) => {
+//             e.preventDefault(); // Prevent immediate navigation
+//             const pacmanOverlay = document.getElementById('pacman-overlay');
+//             pacmanOverlay.style.display = 'flex';
+            
+//             // Navigate after animation
+//             setTimeout(() => {
+//                 window.location.href = button.href;
+//             }, 2000); // Adjust timing as needed
+//         });
+//     });
+// });

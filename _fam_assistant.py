@@ -27,7 +27,12 @@ import libs.raspotify_wrapper as rspw  # Update the import
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 def get_ip_address():
-    """Get the IP address of the machine."""
+    """
+    Get the IP address of the machine.
+    
+    Returns:
+        str: Local IP address of the machine, or '127.0.0.1' if unable to determine
+    """
     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     try:
         s.connect(('10.254.254.254', 1))  # Dummy IP
@@ -40,7 +45,17 @@ def get_ip_address():
     return ip_address
 
 class GestureModule:
-    """Class to handle gesture detection using ultrasonic sensors."""
+    """
+    Class to handle gesture detection using ultrasonic sensors.
+    
+    Attributes:
+        trigger_pin (int): GPIO pin for trigger signal
+        echo_pin (int): GPIO pin for echo signal
+        distance_range (tuple): Min and max distance (cm) for gesture detection
+        gesture_interval (float): Time between gesture checks in seconds
+        debounce_time (float): Minimum time between valid gestures
+        distance_history (deque): Recent distance measurements for smoothing
+    """
     def __init__(self, trigger_pin=18, echo_pin=24, distance_range=(2, 5), gesture_interval=0.2, debounce_time=1.0):
         self.trigger_pin = trigger_pin
         self.echo_pin = echo_pin
@@ -60,6 +75,12 @@ class GestureModule:
         GPIO.cleanup()
 
     def measure_distance(self):
+        """
+        Measure distance using ultrasonic sensor.
+        
+        Returns:
+            float: Distance in centimeters, or None if measurement fails
+        """
         try:
             GPIO.output(self.trigger_pin, True)
             time.sleep(0.00001)
@@ -90,6 +111,12 @@ class GestureModule:
             return None
 
     def get_smoothed_distance(self):
+        """
+        Get smoothed distance measurement using rolling average.
+        
+        Returns:
+            float: Smoothed distance in centimeters, or None if measurement fails
+        """
         distance = self.measure_distance()
         if distance is not None:
             self.distance_history.append(distance)
@@ -128,8 +155,18 @@ class GestureModule:
         self.cleanup_gpio()
 
 class FamAssistant:
-    """Main class for the FamAssistant, handling voice and gesture interactions."""
-
+    """
+    Main class for the FamAssistant, handling voice and gesture interactions.
+    
+    Attributes:
+        access_key (str): API access key for voice services
+        keyword_path (str): Path to wake word model file
+        music_path (str): Path to music directory
+        is_running (bool): Flag indicating if assistant is active
+        is_processing_command (bool): Flag indicating command processing state
+        executor: ThreadPoolExecutor for concurrent operations
+        command_mappings (list): List of (command_phrase, handler_function) tuples
+    """
     def __init__(self, access_key, keyword_path, music_path):
         self.access_key = access_key
         self.keyword_path = keyword_path
@@ -253,7 +290,15 @@ class FamAssistant:
         time.sleep(1)  # Delay before re-enabling gesture detection
 
     def process_command(self, command):
-        """Process the input command and invoke the corresponding handler."""
+        """
+        Process the input command and invoke the corresponding handler.
+        
+        Args:
+            command (str): Voice command to process
+            
+        Note:
+            Uses fuzzy matching to handle similar commands and confirm with user
+        """
         command = command.lower().strip()
         for phrase, handler in self.command_mappings:
             if phrase in command:
@@ -275,7 +320,13 @@ class FamAssistant:
         self.handle_unknown_command(command)
 
     def handle_play_music(self, _command):
-        self.util.speak("Play specific song or playlist?")
+        """
+        Handle music playback commands.
+        
+        Allows playing specific songs or playlists, with automatic download
+        if requested song is not found locally.
+        """
+        self.repSpeak('/home/pi/FAM/tts_audio_files/Play_specific_song_or_playlist.mp3')
         response = self.util.getSpeech()
         if response:
             response = response.lower()
@@ -366,11 +417,11 @@ class FamAssistant:
 
     def handle_enable_raspotify(self, _command):
         self.raspotify_wrapper.enable_raspotify()
-        self.util.speak("Raspotify enabled. The device is now acting as a Spotify Connect device.")
+        self.repSpeak('/home/pi/FAM/tts_audio_files/Raspotify_enabled._The_device_is_now_acting_as_a_Spotify_Connect_device..mp3')
 
     def handle_disable_raspotify(self, _command):
         self.raspotify_wrapper.disable_raspotify()
-        self.util.speak("Raspotify disabled.")
+        self.repSpeak('/home/pi/FAM/tts_audio_files/Raspotify_disabled.mp3')
 
     def handle_unknown_command(self, command):
         logging.info(f"Handling unknown command: {command}")
@@ -421,6 +472,15 @@ class FamAssistant:
         logging.info("Assistant stopped.")
 
     def returnEmailSubject(self, ip_address):
+        """
+        Generate HTML email content for game hub invitation.
+        
+        Args:
+            ip_address (str): Local IP address for game hub URL
+            
+        Returns:
+            str: HTML formatted email content
+        """
         html_content = f'''
         <!DOCTYPE html>
         <html lang="en">

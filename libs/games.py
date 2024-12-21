@@ -11,14 +11,40 @@ import threading
 logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
 
 class Games:
+    """
+    A class for managing a simple HTTP game server.
+
+    This class handles the initialization, starting, and stopping of an HTTP server
+    for serving browser-based games.
+
+    Attributes:
+        status (bool): Current server status.
+        dir (str): Directory containing game files.
+        process (subprocess.Popen): Server process handle.
+        httpd (socketserver.TCPServer): HTTP server instance.
+        server_thread (threading.Thread): Thread running the server.
+    """
+
     def __init__(self, status: bool, dir: str):
+        """
+        Initialize the Games server.
+
+        Args:
+            status (bool): Initial server status.
+            dir (str): Directory containing game files to serve.
+        """
         self.status = status
         self.dir = dir
         self.process = None
         logging.info("Games class initialized with status: %s and directory: %s", status, dir)
 
-    def get_ip_address(self):
-        """Get the IP address of the machine."""
+    def get_ip_address(self) -> str:
+        """
+        Get the local IP address of the machine.
+
+        Returns:
+            str: Local IP address or '127.0.0.1' if unable to determine.
+        """
         s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         try:
             # Attempt to connect to a non-existent IP to determine local IP.
@@ -31,7 +57,13 @@ class Games:
             s.close()
         return ip_address
 
-    def play_game(self):
+    def play_game(self) -> None:
+        """
+        Start the game server in a separate thread.
+        
+        Serves the game directory over HTTP on port 8080.
+        Prints the server URL when successfully started.
+        """
         try:
             logging.info("Attempting to start the game server...")
             if not os.path.exists(self.dir):
@@ -57,7 +89,13 @@ class Games:
         except Exception as e:
             logging.error("An unexpected error occurred: %s", e)
 
-    def stop_game(self):
+    def stop_game(self) -> None:
+        """
+        Stop the game server.
+
+        Raises:
+            Exception: If the server is not running.
+        """
         if hasattr(self, 'httpd'):
             try:
                 logging.info("Attempting to stop the game server")
@@ -66,7 +104,7 @@ class Games:
                 logging.info("Game server stopped successfully.")
             except Exception as e:
                 logging.error("Failed to stop the game server: %s", e)
-                return e
+                raise e
         else:
             error_message = 'Game server is not running.'
             logging.error(error_message)
