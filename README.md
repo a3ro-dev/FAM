@@ -1,196 +1,92 @@
 # Fam Assistant
 
-## Overview
-
-Fam Assistant is a versatile, voice and gesture-activated AI assistant designed to run on devices like the Raspberry Pi Zero 2W. It integrates a variety of functionalities such as music playback, task management, Bluetooth control, news updates, and gaming, providing a comprehensive assistant experience tailored for low-end hardware without compromising performance.
-
----
-
-## Table of Contents
-
-1. [Features](#features)
-2. [Installation](#installation)
-3. [Configuration](#configuration)
-4. [Usage](#usage)
-    - [Voice Commands](#voice-commands)
-    - [Gesture Controls](#gesture-controls)
-5. [Project Structure](#project-structure)
-6. [Development](#development)
-7. [License](#license)
-8. [Support](#support)
-
----
+A voice and gesture-controlled AI assistant optimized for Raspberry Pi Zero 2W. It provides music playback, task management, game hosting, and GPT-powered conversations.
 
 ## Features
 
-### Voice Recognition
-- **Wake Word Detection**: Utilizes Porcupine for efficient wake word detection without heavy processing.
-- **Command Processing**: Recognizes and processes a wide range of voice commands including music control, task management, Bluetooth operations, and more.
-- **GPT Integration**: Handles unknown commands using GPT-powered responses for seamless interactions.
+### Core Functions
+- Voice control with GPT integration
+- Gesture control using ultrasonic sensor
+- Music playback and playlist management 
+- Task/reminder system
+- Game server hosting
+- Raspotify (Spotify Connect) control
 
-### Gesture Control
-- **Hand Gesture Detection**: Uses an ultrasonic sensor to detect hand gestures within a specified distance range (2-5cm).
-- **Debounce Mechanism**: Ensures accurate gesture recognition with debounce protection to prevent false triggers.
-- **Additional Gestures**: Capable of detecting various gestures like long holds and double taps for enhanced control options.
+### Technical Details
+- Multi-threaded architecture for responsive operation
+- GPIO-based gesture detection (HC-SR04 sensor)
+- Audio playback via pygame
+- Local music library with Spotify sync
+- HTTP game server with email invites
 
-### Music Management
-- **Playback Control**: Play, pause, resume, and stop music effortlessly.
-- **Playlist Handling**: Supports shuffle mode and track navigation (next/skip).
-- **Volume Control**: Adjusts volume levels during different states of operation.
-- **Music Download**: Facilitates downloading of music tracks via voice commands.
+## Setup
 
-### Task Management
-- **Add Tasks**: Add new tasks through voice input.
-- **Search Tasks**: Search for existing tasks with fuzzy matching for accuracy.
+1. Clone and install:
+```bash
+git clone https://github.com/a3ro-dev/FAM
+cd FAM
+pip install -r requirements.txt
+```
 
-### Bluetooth Integration
-- **Bluetooth Mode**: Start and stop Bluetooth mode to act as a Bluetooth speaker.
-- **Device Management**: Handles pairing, connecting, and managing Bluetooth devices seamlessly.
-
-### News and Information
-- **News Updates**: Fetches and reads out the latest news headlines.
-- **Time and Date**: Reports current time and date upon request.
-
-### Gaming Hub
-- **Game Launching**: Launch and manage favorite games with voice commands.
-- **Email Invitations**: Sends game session invitations with the device's IP address.
-
-### Automation
-- **System Control**: Execute system commands like shutdown through voice commands.
-- **Chime Notifications**: Plays chimes to indicate successful command detections and operations.
-
-### Utility Functions
-- **IP Address Retrieval**: Obtains the device's IP address for network-related functionalities.
-- **Graceful Error Handling**: Ensures the assistant remains stable and responsive during unexpected events.
-
----
-
-## Installation
-
-### Prerequisites
-- **Hardware**:
-  - Raspberry Pi Zero 2W
-  - Ultrasonic Sensor (HC-SR04)
-  - Microphone
-  - Speakers
-  - GPIO Pins: 18 (Trigger), 24 (Echo)
-  
-- **Software**:
-  - Python 3.x
-  - Pip (Python package installer)
-
-### Steps
-
-1. **Clone the Repository**:
-    ```sh
-    git clone https://github.com/a3ro-dev/FAM
-    cd FAM
-    ```
-
-2. **Install Dependencies**:
-    ```sh
-    pip install -r requirements.txt
-    ```
-
-3. **Configuration**:
-    - Copy the example configuration file:
-      ```sh
-      cp conf/config.example.yaml conf/config.yaml
-      ```
-    - Fill in the required fields in `config.yaml` with your specific details:
-      ```yaml
-      main:
-        access_key: "YOUR_PORCUPINE_ACCESS_KEY"
-        keyword_path: "/path/to/keyword.ppn"
-        music_path: "/path/to/music/directory"
-        openai_api_key: "YOUR_OPENAI_API_KEY"
-        weather_api_key: "YOUR_WEATHER_API_KEY"
-        news_api_key: "YOUR_NEWS_API_KEY"
-        email:
-          sender_email: "akshatsingh14372@outlook.com"
-          password: "YOUR_EMAIL_PASSWORD"
-          smtp_server: "smtp.example.com"
-          smtp_port: 587
-      ```
-
-4. **Run the Assistant**:
-    ```sh
-    python main.py
-    ```
-
----
-
-## Configuration
-
-The configuration file `config.yaml` contains various settings such as API keys, file paths, and other parameters. Ensure all required fields are filled out correctly to enable the assistant's functionalities.
-
-### Configuration Fields
-
-- **access_key**: Your access key for the Porcupine wake word detection engine.
-- **keyword_path**: Path to your Porcupine keyword file.
-- **music_path**: Path to your music directory.
-- **openai_api_key**: Your OpenAI API key for GPT integration.
-- **weather_api_key**: Your API key for fetching weather information.
-- **news_api_key**: Your API key for fetching news updates.
-- **email**:
-  - **sender_email**: Your email address used for sending emails.
-  - **password**: Your email account password.
-  - **smtp_server**: SMTP server address for your email provider.
-  - **smtp_port**: SMTP server port (commonly 587 for TLS).
-
----
+2. Configure `conf/config.yaml`:
+```yaml
+main:
+    access_key: "<your_access_key_here>"
+    keyword_path: "<your_keyword_path_here>"
+    music_path: "<your_music_path_here>"
+    groq_api_key: "<your_groq_api_key_here>"
+    openai_api_key: "<your_openai_api_key_here>"
+    model_name: "<your_model_name_here>"
+utilities:
+    author: "<your_name_here>"
+    audio_files:
+        success: "<path_to_success_audio_file_here>"
+        error: "<path_to_error_audio_file_here>"
+        load: "<path_to_load_audio_file_here>"
+    model_path: "<path_to_model_here>"
+    weather_api_key: "<your_weather_api_key_here>"
+    news_api_key: "<your_news_api_key_here>"
+    email:
+        sender_email: "<your_email_here>"
+        sender_password: "<your_password_here>"
+        smtp_server: "<your_smtp_server_here>"
+        smtp_port: "<your_smtp_port_here>"
+    image_path: "<path_to_image_here>"
+music_search:
+    output_path: "<path_to_output_here>"
+```
+3. Run:
+```bash
+python main.py
+```
 
 ## Usage
 
-### Starting the Assistant
-- **Launch**: Run the assistant using the command mentioned above. The assistant will start listening for the wake word to activate.
-
 ### Voice Commands
 
-#### System Control
-- **Shutdown**: "Shutdown"
+#### System
+- "Shutdown" - Power off system
+- "Start my day" - Morning routine
+- "Enable/disable raspotify" - Control Spotify Connect
 
-#### Music Control
-- **Play Music**: "Play music"
-- **Pause Music**: "Pause music"
-- **Resume Music**: "Resume music"
-- **Stop Music**: "Stop music"
-- **Next Song**: "Next song" or "Skip"
-- **Seek Forward**: "Seek forward"
+#### Media
+- "Play/pause/resume/stop music"
+- "Play [song name]"
+- "Next/skip" - Next track
+- "Download [song]" - Add to library
 
-#### Task Management
-- **Add Task**: "Add task" or "Add a new task"
-- **Search Task**: "Search task"
+#### Games
+- "Play/start game" - Launch game server
+- "Stop/end game" - Stop server
 
-#### Information
-- **Time Inquiry**: "What time is it?" or "What’s the time?" or "Time"
-- **Date Inquiry**: "What’s the date?" or "Current date" or "Date"
+#### Tasks
+- "Add task" - Create new task
+- "Search task" - Find existing task
 
-#### News
-- **Get News**: "News"
-
-#### Bluetooth [Not Yet Deployed]
-- **Start Bluetooth Mode**: "Start Bluetooth mode", "Enable Bluetooth mode", or "Bluetooth speaker mode"
-- **Stop Bluetooth Mode**: "Stop Bluetooth mode", "Disable Bluetooth mode", or "Exit Bluetooth speaker mode"
-
-#### Gaming
-- **Play Game**: "Play game" or "Start game"
-- **Stop Game**: "Stop game" or "End game"
-
-#### Greetings
-- **Greet**: "Hi", "Hello", or "Hey"
-- **How Are You**: "How are you?"
-
-#### Automation
-- **Start My Day**: "Start my day" or "Good morning"
-
-### Gesture Controls
-- **Activate Voice Input**: Hold your hand 2-5cm from the ultrasonic sensor to activate voice input.
-
----
+### Gesture Control
+Hold hand 2-5cm from ultrasonic sensor to activate voice input.
 
 ## Project Structure
-
 ```
 FamAssistant/
 ├── 
@@ -228,59 +124,15 @@ requirements.txt
 
 ## Development
 
-- **Language**: Python 3.x
-- **Concurrency**:
-  - Utilizes `ThreadPoolExecutor` for handling I/O-bound tasks like command processing and gesture detection.
-  - Employs `ProcessPoolExecutor` to leverage all four cores of the Raspberry Pi Zero 2W for CPU-bound operations, ensuring efficient performance and avoiding deadlocks.
-  
-- **Logging**: Implements structured logging for monitoring and debugging purposes.
-- **GPIO Management**: Manages GPIO pins for ultrasonic sensor-based gesture detection with proper setup and cleanup to prevent hardware issues.
-- **Error Handling**: Incorporates comprehensive error handling to maintain assistant stability and reliability.
-  
-### Key Improvements for Multi-Core Utilization
-- **ThreadPoolExecutor and ProcessPoolExecutor**:
-  - Added `ThreadPoolExecutor` for I/O-bound tasks.
-  - Added `ProcessPoolExecutor` for CPU-bound tasks to utilize all four cores effectively.
-  
-- **Gesture Detection**:
-  - Runs gesture detection in a separate thread to prevent blocking the main process.
-  
-- **Command Processing**:
-  - Handles command processing concurrently using executors to distribute the workload across multiple cores.
-  
-- **Avoiding Deadlocks**:
-  - Ensures thread-safe operations with proper locking mechanisms.
-  - Separates I/O and CPU-bound tasks to different executors to prevent resource contention.
-
-### Concurrency Model
-
-Fam Assistant employs a hybrid concurrency model to maximize CPU utilization and maintain responsiveness:
-
-1. **ThreadPoolExecutor**: 
-   - Handles I/O-bound tasks such as reading audio streams, gesture detection, and command processing.
-   - Ensures that blocking operations do not hinder the main execution flow.
-
-2. **ProcessPoolExecutor**:
-   - Manages CPU-bound tasks like speech recognition and GPT-powered command handling.
-   - Distributes these tasks across multiple CPU cores to enhance performance.
-
-### Performance Optimization
-
-- **Efficient Resource Management**: Proper initialization and cleanup of hardware resources to prevent memory leaks and hardware conflicts.
-- **Load Balancing**: Distributes tasks evenly across threads and processes to avoid overloading any single core.
-- **Debounce Mechanism**: Minimizes redundant processing by implementing debounce timers for gesture detection.
-
-### Testing and Monitoring
-
-- **Unit Testing**: Implement comprehensive unit tests for each module to ensure individual components function correctly.
-- **Performance Monitoring**: Regularly monitor CPU and memory usage to identify and address performance bottlenecks.
-- **Logging**: Utilize detailed logging to track application behavior and facilitate debugging.
-
----
+- Built with Python 3.11.x
+- Uses ThreadPoolExecutor for I/O operations
+- Implements hardware debouncing for gesture detection
+- Comprehensive error handling and logging
 
 ## License
 
-Closed Source
+This work is licensed under a [Creative Commons Attribution-NonCommercial-NoDerivatives 4.0 International License](http://creativecommons.org/licenses/by-nc-nd/4.0/).
+
 ---
 
 ## Support

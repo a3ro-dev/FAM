@@ -15,7 +15,27 @@ logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %
 MUSIC_EXTENSIONS = ('.mp3', '.wav')
 
 class MusicPlayer:
+    """
+    A class for managing music playback and playlist operations.
+
+    Attributes:
+        music_directory (str): Directory containing music files
+        shuffle (bool): Whether playlist should be shuffled
+        playlist (list): List of music files to play
+        current_index (int): Index of currently playing song
+        is_playing (bool): Whether music is currently playing
+        is_paused (bool): Whether playback is paused
+        lock (threading.Lock): Thread lock for synchronization
+    """
+
     def __init__(self, music_directory: str, shuffle: bool = False):
+        """
+        Initialize the music player.
+
+        Args:
+            music_directory (str): Path to directory containing music files
+            shuffle (bool, optional): Whether to shuffle playlist. Defaults to False.
+        """
         self.music_directory = music_directory
         self.shuffle = shuffle
         self.playlist = list(self.load_playlist())  # Convert set to list immediately
@@ -40,6 +60,15 @@ class MusicPlayer:
         sync_thread.start()
 
     def load_playlist(self) -> list:
+        """
+        Load music files from the directory into a playlist.
+
+        Returns:
+            list: List of paths to music files in the directory
+
+        Raises:
+            ValueError: If music_directory is invalid
+        """
         if not os.path.isdir(self.music_directory):
             raise ValueError(f"Invalid directory: {self.music_directory}")
         playlist = [os.path.join(self.music_directory, f) for f in os.listdir(self.music_directory) 
@@ -48,6 +77,7 @@ class MusicPlayer:
         return playlist
 
     def play_music(self):
+        """Start music playback from current position in playlist."""
         with self.lock:
             if not self.playlist:
                 logging.warning("No music files found in the directory.")
@@ -68,6 +98,10 @@ class MusicPlayer:
             time.sleep(0.1)  # Reduced sleep time for more responsive event handling
 
     def _play_current_song(self):
+        """
+        Play the song at the current playlist index.
+        Includes retry logic and volume adjustment for announcements.
+        """
         retries = 2  # Try 3 times to play a song before skipping
         while retries > 0:
             try:
@@ -95,12 +129,14 @@ class MusicPlayer:
                     self.play_next()
 
     def play_music_thread(self):
+        """Start music playback in a separate thread."""
         if not self.is_playing:
             self.thread = threading.Thread(target=self.play_music)
             self.thread.start()
             logging.info("Music playback thread started.")
 
     def play_next(self):
+        """Move to and play the next song in the playlist."""
         with self.lock:
             if not self.playlist:
                 return
@@ -110,6 +146,7 @@ class MusicPlayer:
             self._play_current_song()
 
     def pause_music(self):
+        """Pause current playback if music is playing."""
         with self.lock:
             if self.is_playing and not self.is_paused:
                 pygame_manager.PygameManager.pause()
@@ -117,6 +154,7 @@ class MusicPlayer:
                 logging.info("Music paused.")
 
     def unpause_music(self):
+        """Resume playback if music is paused."""
         with self.lock:
             if self.is_playing and self.is_paused:
                 pygame_manager.PygameManager.unpause()
@@ -124,6 +162,7 @@ class MusicPlayer:
                 logging.info("Music unpaused.")
 
     def stop_music(self):
+        """Stop music playback and clean up resources."""
         with self.lock:
             self.is_playing = False
             pygame_manager.PygameManager.stop()
@@ -133,6 +172,15 @@ class MusicPlayer:
             logging.info("Music stopped.")
 
     def set_volume(self, volume: int):
+        """
+        Set playback volume.
+
+        Args:
+            volume (int): Volume level from 0-100
+
+        Raises:
+            ValueError: If volume is outside valid range
+        """
         if 0 <= volume <= 100:
             pygame_manager.PygameManager.set_volume(volume)
             logging.info("Volume set to %d", volume)
@@ -140,6 +188,12 @@ class MusicPlayer:
             raise ValueError("Volume must be between 0 and 100")
 
     def seek_forward(self, seconds: int):
+        """
+        Seek forward in current song.
+
+        Args:
+            seconds (int): Number of seconds to seek forward
+        """
         if self.is_playing:
             current_pos = pygame_manager.PygameManager.get_position()
             try:
@@ -149,7 +203,15 @@ class MusicPlayer:
                 logging.error("Error seeking forward: %s", e)
 
     def play_specific_song(self, song_name: str) -> bool:
-        """Attempt to play a specific song by name."""
+        """
+        Find and play a specific song by name.
+
+        Args:
+            song_name (str): Name of song to play
+
+        Returns:
+            bool: True if song was found and played, False otherwise
+        """
         with self.lock:
             song_list = {os.path.splitext(os.path.basename(song))[0]: song for song in self.playlist}
             if song_name in song_list:
@@ -168,7 +230,10 @@ class MusicPlayer:
             return True
 
     def _sync_playlist(self):
-        """Sync the music directory with Spotify playlist."""
+        """
+        Sync local music files with configured Spotify playlist.
+        Retries on failure with exponential backoff.
+        """
         max_retries = 3
         retry_delay = 5
 

@@ -1,7 +1,29 @@
+"""
+Utility Module for FAM (File Assistant Manager)
+
+This module provides various utility functions for managing system operations, including:
+- Audio playback and text-to-speech
+- Speech recognition
+- Weather information retrieval
+- News fetching
+- Email sending
+- Time and date management
+
+The module uses configuration from 'conf/config.yaml' for API keys and settings.
+
+Dependencies:
+    - openai: For text-to-speech conversion
+    - speech_recognition: For speech input
+    - pydub: For audio processing
+    - yaml: For configuration management
+    - requests: For API calls
+    - smtplib: For email functionality
+"""
+
 import libs.gpt as gpt
 import random
 import time
-import speech_recognition as sr
+import speech_recognition as sr # type: ignore
 from functools import lru_cache
 import yaml
 import requests
@@ -39,33 +61,21 @@ openai.api_key = config['main']['openai_api_key']
 
 class Utilities:
     """
-    Utilities class provides various utility functions such as playing chimes, text-to-speech, speech recognition, 
-    fetching current time and date, weather information, news headlines, and sending emails.
-    Methods:
-        __init__():
-            Initializes the Utilities class with author and audio files.
-        playChime(type: str):
-            Plays a chime sound based on the provided type.
-        speak(text: str):
-            Converts the provided text to speech and plays the audio.
-        getSpeech() -> str:
-            Listens for speech input from the microphone and returns the recognized text.
-        getTime() -> str:
-            Returns the current time as a string.
-        getDate() -> str:
-            Returns the current date in a formatted string.
-        getWeather(city: str, api_key: str) -> str:
-            Fetches and returns the weather information for the specified city.
-        getNews(api_key: str, num_articles: int = 3) -> set:
-            Fetches and returns a set of summarized news articles.
-        get_part_of_day() -> str:
-            Returns the part of the day (morning, afternoon, evening, night) based on the current time.
-        startMyDay(location: str = 'Allahabad'):
-            Provides a summary of the current date, time, weather, and news headlines to start the day.
-        send_email(recipient: str, subject: str, plain_content: str, html_content: str = ""):
-            Sends an email with the specified recipient, subject, plain text content, and optional HTML content.
+    A utility class providing various system operation functions.
+
+    This class handles common operations like audio playback, speech recognition,
+    weather updates, news fetching, and email communications.
+
+    Attributes:
+        author (str): The system author name from config
+        audio_files (dict): Mapping of audio file types to their paths
+            - 'success': Path to success sound
+            - 'error': Path to error sound
+            - 'load': Path to loading sound
     """
+
     def __init__(self):
+        """Initialize Utilities with author name and audio file paths."""
         self.author = author    
         self.audio_files = {
             "success": success,
@@ -74,7 +84,16 @@ class Utilities:
         }
         logging.info("Utilities class initialized.")
 
-    def playChime(self, type: str):
+    def playChime(self, type: str) -> None:
+        """
+        Play a chime sound of the specified type.
+
+        Args:
+            type (str): Type of chime ('success', 'error', or 'load')
+
+        Raises:
+            ValueError: If the chime type is unknown
+        """
         try:
             if type in self.audio_files:
                 logging.debug(f"Playing chime of type: {type}")
@@ -84,7 +103,16 @@ class Utilities:
         except Exception as e:
             logging.error(f"Error in playChime: {e}")
 
-    def speak(self, text: str):
+    def speak(self, text: str) -> None:
+        """
+        Convert text to speech and play it.
+
+        Args:
+            text (str): The text to be converted to speech
+
+        Notes:
+            Uses OpenAI's TTS model 'tts-1' with 'shimmer' voice
+        """
         if text.strip():  # Check if the text is not empty or whitespace
             try:
                 logging.debug(f"Generating speech for text: {text}")
@@ -102,7 +130,16 @@ class Utilities:
         else:
             logging.error("Text to be spoken is empty or whitespace.")
 
-    def getSpeech(self):
+    def getSpeech(self) -> str:
+        """
+        Listen for and recognize speech input.
+
+        Returns:
+            str: The recognized text, or empty string if recognition fails
+
+        Notes:
+            Requires FLAC codec to be installed on the system
+        """
         if not shutil.which("flac"):
             logging.error("FLAC conversion utility not available. Please install FLAC.")
             return ""
@@ -121,12 +158,24 @@ class Utilities:
             logging.error(f"Error in getSpeech: {e}")
             return ""
 
-    def getTime(self):
+    def getTime(self) -> str:
+        """
+        Get the current system time.
+
+        Returns:
+            str: Formatted current time string
+        """
         current_time = time.ctime()
         logging.info(f"Current time: {current_time}")
         return current_time
     
-    def getDate(self):
+    def getDate(self) -> str:
+        """
+        Get the current date with proper ordinal suffix.
+
+        Returns:
+            str: Formatted date string (e.g., "December 25th, 2023")
+        """
         try:
             now = datetime.now()
             day = now.day
@@ -149,6 +198,16 @@ class Utilities:
             return ''
     
     def getWeather(self, city: str, api_key=weatherAPI) -> str:
+        """
+        Fetch weather information for a specified city.
+
+        Args:
+            city (str): Name of the city
+            api_key (str, optional): OpenWeatherMap API key
+
+        Returns:
+            str: Formatted weather report or error message
+        """
         url = f"http://api.openweathermap.org/data/2.5/weather?q={city},in&appid={api_key}"
         try:
             logging.debug(f"Fetching weather data for city: {city}")
@@ -194,7 +253,20 @@ class Utilities:
             return "An error occurred while processing the weather data."
     
     @lru_cache(maxsize=32)
-    def getNews(self, api_key=newsAPI, num_articles=3):
+    def getNews(self, api_key=newsAPI, num_articles=3) -> set:
+        """
+        Fetch and summarize top news articles.
+
+        Args:
+            api_key (str, optional): News API key
+            num_articles (int, optional): Number of articles to fetch (default: 3)
+
+        Returns:
+            set: Set of summarized news articles
+
+        Notes:
+            Results are cached using lru_cache
+        """
         url = f"https://newsapi.org/v2/top-headlines?country=in&apiKey={api_key}"
         try:
             logging.debug("Fetching news data")
@@ -207,7 +279,7 @@ class Utilities:
             articles = data.get("articles", [])
             if len(articles) < num_articles:
                 logging.warning(f"Only {len(articles)} articles available, cannot select {num_articles}")
-                return []
+                return {0}
     
             selected_articles = random.sample(articles, min(num_articles, len(articles)))
     
@@ -241,7 +313,13 @@ class Utilities:
             logging.error(f"Unexpected error in getNews: {e}")
             return set()
 
-    def get_part_of_day(self):
+    def get_part_of_day(self) -> str:
+        """
+        Determine the current part of the day.
+
+        Returns:
+            str: One of 'morning', 'afternoon', 'evening', 'night', or 'unknown'
+        """
         try:
             current_hour = datetime.now().hour
             logging.debug(f"Current hour: {current_hour}")
@@ -261,7 +339,16 @@ class Utilities:
             logging.error(f"Error in get_part_of_day: {e}")
             return "unknown"
 
-    def startMyDay(self, location='Allahabad'):
+    def startMyDay(self, location='Allahabad') -> None:
+        """
+        Provide a morning briefing with date, weather, and news.
+
+        Args:
+            location (str, optional): City for weather info (default: 'Allahabad')
+
+        Notes:
+            Combines multiple utility functions to create a comprehensive briefing
+        """
         try:
             part_of_day = self.get_part_of_day()
             date = self.getDate()
@@ -291,7 +378,19 @@ class Utilities:
             logging.error(f"Error in startMyDay: {e}")
             self.speak("An error occurred while starting your day.")
 
-    def send_email(self, recipient: str, subject: str, plain_content: str, html_content: str = ""):
+    def send_email(self, recipient: str, subject: str, plain_content: str, html_content: str = "") -> None:
+        """
+        Send an email with optional HTML content.
+
+        Args:
+            recipient (str): Recipient email address
+            subject (str): Email subject
+            plain_content (str): Plain text content
+            html_content (str, optional): HTML content
+
+        Notes:
+            Uses Gmail SMTP server
+        """
         sender_email = emailID
         sender_password = emailPasswd
         smtp_server = "smtp.gmail.com"
