@@ -110,6 +110,7 @@ _fam_assistant.py
 │   ├── games.py                 # Games management
 │   ├── gpt.py                   # GPT integration
 │   ├── music.py                 # Music player implementation
+│   ├── raspotify_wrapper.py     # Spotify Connect control
 │   ├── music_search.py          # Music search and download
 │   └── utilities.py             # Utility functions
 ├── assets/
