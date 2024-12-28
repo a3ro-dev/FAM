@@ -59,93 +59,133 @@ class GestureModule:
         self.distance_range = distance_range
         self.gesture_interval = gesture_interval
         self.debounce_time = debounce_time
-        self.distance_history = deque(maxlen=3)
+        self.distance_history = deque(maxlen=5)  # Increased history size
         self.is_gpio_active = True
+        self.last_valid_measurement = None
+        self.consecutive_timeouts = 0
+        self.max_timeouts = 5
         self.setup_gpio()
 
     def setup_gpio(self):
-        GPIO.setmode(GPIO.BCM)
-        GPIO.setup(self.trigger_pin, GPIO.OUT)
-        GPIO.setup(self.echo_pin, GPIO.IN)
-        GPIO.output(self.trigger_pin, False)
+        """Initialize GPIO pins with proper settings."""
+        try:
+            GPIO.setmode(GPIO.BCM)
+            GPIO.setup(self.trigger_pin, GPIO.OUT)
+            GPIO.setup(self.echo_pin, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)  # Added pull-down
+            GPIO.output(self.trigger_pin, False)
+            time.sleep(0.1)  # Allow sensor to settle
+        except Exception as e:
+            logging.error(f"GPIO setup failed: {e}")
+            self.is_gpio_active = False
 
     def cleanup_gpio(self):
         GPIO.cleanup()
         self.is_gpio_active = False
 
     def measure_distance(self):
-        """
-        Measure distance using ultrasonic sensor.
-        
-        Returns:
-            float: Distance in centimeters, or None if measurement fails
-        """
+        """Measure distance with improved accuracy and timeout handling."""
+        if not self.is_gpio_active:
+            return None
+
         try:
+            # Reset trigger
+            GPIO.output(self.trigger_pin, False)
+            time.sleep(0.000005)  # 5 microseconds settle
+
+            # Send 10us pulse
             GPIO.output(self.trigger_pin, True)
-            time.sleep(0.00001)
+            time.sleep(0.00001)    # Exactly 10 microseconds
             GPIO.output(self.trigger_pin, False)
 
-            start_time = time.time()
-            stop_time = start_time  # Initialize stop_time with default value
-            timeout = start_time + 0.02  # 20ms timeout
+            # More precise timeout handling
+            timeout = time.time() + 0.02  # 20ms timeout
+            
+            # Wait for echo start (LOW to HIGH)
+            while GPIO.input(self.echo_pin) == 0:
+                pulse_start = time.time()
+                if pulse_start > timeout:
+                    self.consecutive_timeouts += 1
+                    if self.consecutive_timeouts > self.max_timeouts:
+                        logging.warning("Multiple consecutive timeouts detected")
+                    return None
 
-            # Wait for echo to start
-            while GPIO.input(self.echo_pin) == 0 and time.time() < timeout:
-                start_time = time.time()
+            # Wait for echo end (HIGH to LOW)
+            while GPIO.input(self.echo_pin) == 1:
+                pulse_end = time.time()
+                if pulse_end > timeout:
+                    return None
 
-            # Wait for echo to end
-            while GPIO.input(self.echo_pin) == 1 and time.time() < timeout:
-                stop_time = time.time()
+            # Reset timeout counter on successful measurement
+            self.consecutive_timeouts = 0
 
-            if time.time() >= timeout:
-                logging.debug("Distance measurement timed out")
-                return None
+            # Calculate distance
+            pulse_duration = pulse_end - pulse_start
+            distance = (pulse_duration * 34300) / 2  # Speed of sound = 343 m/s
 
-            time_elapsed = stop_time - start_time
-            distance = (time_elapsed * 34300) / 2  # Speed of sound = 343 m/s
+            # Validate measurement
+            if 0 <= distance <= 400:  # Valid range for HC-SR04
+                self.last_valid_measurement = distance
+                return round(distance, 1)
+            return None
 
-            return distance
         except Exception as e:
             logging.warning(f"Error measuring distance: {e}")
             return None
 
     def get_smoothed_distance(self):
-        """
-        Get smoothed distance measurement using rolling average.
+        """Get smoothed distance measurement with outlier rejection."""
+        measurements = []
+        for _ in range(3):  # Take 3 measurements
+            dist = self.measure_distance()
+            if dist is not None:
+                measurements.append(dist)
+            time.sleep(0.01)  # Brief delay between measurements
+
+        if len(measurements) < 2:  # Need at least 2 valid measurements
+            return None
+
+        # Remove outliers (measurements that deviate too much from median)
+        median = sorted(measurements)[len(measurements)//2]
+        filtered = [x for x in measurements if abs(x - median) < 2]  # Within 2cm of median
+
+        if not filtered:
+            return None
+
+        avg_distance = sum(filtered) / len(filtered)
+        self.distance_history.append(avg_distance)
         
-        Returns:
-            float: Smoothed distance in centimeters, or None if measurement fails
-        """
-        distance = self.measure_distance()
-        if distance is not None:
-            self.distance_history.append(distance)
-            return np.mean(self.distance_history)
-        return None
+        # Return moving average if we have enough history
+        if len(self.distance_history) >= 3:
+            return sum(self.distance_history) / len(self.distance_history)
+        return avg_distance
 
     def detect_hand_gesture(self):
-        logging.debug("Starting hand gesture detection...")
-        last_gesture_time = time.time()
+        """Detect hand gestures with improved reliability."""
+        if not self.is_gpio_active:
+            return False
 
-        while True:
-            if not self.is_gpio_active:
-                break
-            current_distance = self.get_smoothed_distance()
-
-            if current_distance is None:
+        valid_detections = 0
+        required_detections = 2  # Need 2 valid detections in sequence
+        
+        for _ in range(3):  # Try up to 3 times
+            distance = self.get_smoothed_distance()
+            
+            if distance is None:
                 time.sleep(self.gesture_interval)
                 continue
-
-            current_time = time.time()
-            if current_time - last_gesture_time < self.debounce_time:
-                time.sleep(self.gesture_interval)
-                continue
-
-            if self.distance_range[0] <= current_distance <= self.distance_range[1]:
-                logging.info("Hand gesture detected.")
-                last_gesture_time = current_time
-                return True
-
+                
+            # Check if distance is within valid range (2-5cm)
+            if self.distance_range[0] <= distance <= self.distance_range[1]:
+                valid_detections += 1
+                if valid_detections >= required_detections:
+                    logging.info(f"Hand gesture detected at {distance:.1f}cm")
+                    return True
+            else:
+                valid_detections = 0  # Reset on invalid detection
+                
             time.sleep(self.gesture_interval)
+            
+        return False
 
     def start_hand_gesture_detection(self):
         hand_gesture_thread = threading.Thread(target=self.detect_hand_gesture, daemon=True)

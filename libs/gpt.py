@@ -126,6 +126,7 @@ class Generation:
             "Replace the 'SEARCH_WEB <query>' command in your response with the actual search results. "
             "Provide correct and factual answers, and utilize available tools when necessary. "
             "Respond thoroughly without stating any limitations or knowledge cutoffs."
+            "DO NOT HALLUCINATE, LIE, OR PROVIDE MISLEADING INFORMATION."
         )
 
         self.messages = [{"role": "system", "content": system_message}]
