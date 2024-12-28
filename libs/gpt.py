@@ -8,8 +8,6 @@ import subprocess
 from functools import lru_cache
 from difflib import SequenceMatcher
 from typing import Optional
-import json 
-import openai
 
 with open('conf/secrets.yaml', 'r') as file:
     config = yaml.safe_load(file)
@@ -33,7 +31,6 @@ class Generation:
         self.messages = []
         self.max_messages = 10
         self.client = Groq(api_key=groqKey)
-        openai.api_key = openaiKey
 
     def encode_image(self, image_path: str) -> str:
         """
@@ -113,70 +110,63 @@ class Generation:
     
     def live_chat_with_ai(self, text: str) -> str:
         """
-        Conduct a live chat session with AI using OpenAI's gpt-4o-mini model and web search tool calling.
+        Conduct a live chat session with AI, including web search capabilities.
+
+        Args:
+            text (str): User's input text.
+
+        Returns:
+            str: AI's response, potentially including web search results.
         """
-        import json
         current_time_date = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         system_message = (
             f"Current time and date: {current_time_date}. "
             "You are Fam, an AI voice assistant created by Akshat Singh Kushwaha. "
-            "You can search the web for current information using the function search_web. "
-            "Only call search_web when a user needs up-to-date info."
-        )
-        self.messages = [
-            {"role": "system", "content": system_message},
-            {"role": "user", "content": text},
-        ]
-
-        functions = [{
-            "name": "search_web",
-            "description": "Search the web for current information",
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "query": {
-                        "type": "string",
-                        "description": "The search query"
-                    }
-                },
-                "required": ["query"]
-            },
-        }]
-
-        response = openai.chat.completions.create(
-            model="gpt-4o-mini",
-            messages=self.messages,
-            functions=functions,
-            function_call="auto",
-            temperature=0.7,
-            max_tokens=2048,
+            "When you need up-to-date information, use 'SEARCH_WEB <query>' to search the web. "
+            "Replace the 'SEARCH_WEB <query>' command in your response with the actual search results. "
+            "Provide correct and factual answers, and utilize available tools when necessary. "
+            "Respond thoroughly without stating any limitations or knowledge cutoffs."
         )
 
-        response_msg = response.choices[0].message
-        if response_msg.get("function_call"):
-            try:
-                call_name = response_msg["function_call"]["name"]
-                args = json.loads(response_msg["function_call"]["arguments"])
-                if call_name == "search_web":
-                    result = self.search_web(args.get("query", ""))
-                    self.messages.append(response_msg)
-                    self.messages.append({
-                        "role": "function",
-                        "name": "search_web",
-                        "content": result,
-                    })
-                    second_response = openai.chat.completions.create(
-                        model="gpt-4o-mini",
-                        messages=self.messages,
-                        temperature=0.7,
-                        max_tokens=2048,
-                    )
-                    return second_response.choices[0].message.content
-            except Exception as e:
-                return f"Error calling function: {e}"
+        self.messages = [{"role": "system", "content": system_message}]
+        self.messages.append({"role": "user", "content": text})
 
-        return response_msg["content"]
-    
+        last_response = ""
+        while True:
+            completion = self.client.chat.completions.create(
+                model="mixtral-8x7b-32768",
+                messages=self.messages,
+                temperature=0.7,
+                max_tokens=2048,
+                top_p=1,
+                stream=False,
+                stop=None,
+            )
+
+            response = completion.choices[0].message.content
+            if response is None:
+                return ""
+
+            # Process special commands in the assistant's response
+            if "SEARCH_WEB" in response:
+                search_term = self.extract_command_argument(response, "SEARCH_WEB")
+                if search_term:
+                    web_summary = self.search_web(search_term)
+                    # Replace the command with the search results
+                    modified_response = response.replace(f"SEARCH_WEB {search_term}", web_summary)
+                    self.messages.append({"role": "assistant", "content": modified_response})
+                    # Continue the loop to allow the assistant to refine its response if needed
+                    last_response = modified_response
+                    continue
+            else:
+                # Prevent infinite loops by checking for similar responses
+                if self.is_similar_response(response, last_response):
+                    self.messages.append({"role": "assistant", "content": response})
+                    return response
+                last_response = response
+                self.messages.append({"role": "assistant", "content": response})
+                return response
+
     def extract_command_argument(self, response: str, command: str) -> Optional[str]:
         """
         Extract the argument for a given command from the response text.
