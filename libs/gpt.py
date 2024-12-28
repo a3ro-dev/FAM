@@ -8,6 +8,7 @@ import subprocess
 from functools import lru_cache
 from difflib import SequenceMatcher
 from typing import Optional
+import json 
 
 with open('conf/secrets.yaml', 'r') as file:
     config = yaml.safe_load(file)
@@ -110,13 +111,7 @@ class Generation:
     
     def live_chat_with_ai(self, text: str) -> str:
         """
-        Conduct a live chat session with AI, including web search capabilities.
-
-        Args:
-            text (str): User's input text.
-
-        Returns:
-            str: AI's response, potentially including web search results.
+        Conduct a live chat session with AI, including web search and assistant control.
         """
         current_time_date = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         system_message = (
@@ -128,44 +123,92 @@ class Generation:
             "Respond thoroughly without stating any limitations or knowledge cutoffs."
         )
 
+        tools = [
+            {
+                "type": "function",
+                "function": {
+                    "name": "control_music",
+                    "description": "Control music playback (play, pause, resume, stop, next)",
+                    "parameters": {
+                        "type": "object",
+                        "properties": {
+                            "action": {
+                                "type": "string",
+                                "enum": ["play", "pause", "resume", "stop", "next"],
+                                "description": "Music control action to perform"
+                            },
+                            "song_name": {
+                                "type": "string",
+                                "description": "Optional song name for 'play' action"
+                            }
+                        },
+                        "required": ["action"]
+                    }
+                }
+            },
+            {
+                "type": "function",
+                "function": {
+                    "name": "search_web",
+                    "description": "Search the web for current information",
+                    "parameters": {
+                        "type": "object",
+                        "properties": {
+                            "query": {
+                                "type": "string",
+                                "description": "The search query"
+                            }
+                        },
+                        "required": ["query"]
+                    }
+                }
+            }
+        ]
+
         self.messages = [{"role": "system", "content": system_message}]
         self.messages.append({"role": "user", "content": text})
-
         last_response = ""
+
         while True:
             completion = self.client.chat.completions.create(
                 model="mixtral-8x7b-32768",
                 messages=self.messages,
+                tools=tools,
+                tool_choice="auto",
                 temperature=0.7,
                 max_tokens=2048,
                 top_p=1,
                 stream=False,
                 stop=None,
             )
+            response = completion.choices[0].message
 
-            response = completion.choices[0].message.content
-            if response is None:
-                return ""
+            if response.tool_calls:
+                for tool_call in response.tool_calls:
+                    func_name = tool_call.function.name
+                    func_args = json.loads(tool_call.function.arguments)
 
-            # Process special commands in the assistant's response
-            if "SEARCH_WEB" in response:
-                search_term = self.extract_command_argument(response, "SEARCH_WEB")
-                if search_term:
-                    web_summary = self.search_web(search_term)
-                    # Replace the command with the search results
-                    modified_response = response.replace(f"SEARCH_WEB {search_term}", web_summary)
-                    self.messages.append({"role": "assistant", "content": modified_response})
-                    # Continue the loop to allow the assistant to refine its response if needed
-                    last_response = modified_response
-                    continue
-            else:
-                # Prevent infinite loops by checking for similar responses
-                if self.is_similar_response(response, last_response):
-                    self.messages.append({"role": "assistant", "content": response})
-                    return response
-                last_response = response
-                self.messages.append({"role": "assistant", "content": response})
-                return response
+                    if func_name == "search_web":
+                        search_result = self.search_web(func_args["query"])
+                        self.messages.append({"role": "tool", "content": search_result, "tool_call_id": tool_call.id})
+
+                    elif func_name == "control_music":
+                        action = func_args["action"]
+                        song_name = func_args.get("song_name")
+                        method_name = f"handle_{action}_music"
+                        if hasattr(self, method_name):
+                            func = getattr(self, method_name)
+                            result = func(song_name) if song_name else func()
+                            self.messages.append({"role": "tool", "content": f"Music {action}: {result}", "tool_call_id": tool_call.id})
+                continue
+
+            # Prevent repeating responses
+            if self.is_similar_response(response.content, last_response):
+                return response.content
+
+            last_response = response.content
+            self.messages.append({"role": "assistant", "content": response.content})
+            return response.content
 
     def extract_command_argument(self, response: str, command: str) -> Optional[str]:
         """

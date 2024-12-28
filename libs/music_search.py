@@ -17,7 +17,7 @@ with open('conf/secrets.yaml') as file:
     config = yaml.safe_load(file)
 
 # Constants for configuration keys and file extensions
-CONFIG_PATH = 'conf/config.yaml'
+CONFIG_PATH = 'conf/secrets.yaml'
 MUSIC_EXTENSIONS = ('.mp3',)
 
 # Configure logging

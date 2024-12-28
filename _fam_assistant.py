@@ -60,6 +60,7 @@ class GestureModule:
         self.gesture_interval = gesture_interval
         self.debounce_time = debounce_time
         self.distance_history = deque(maxlen=3)
+        self.is_gpio_active = True
         self.setup_gpio()
 
     def setup_gpio(self):
@@ -70,6 +71,7 @@ class GestureModule:
 
     def cleanup_gpio(self):
         GPIO.cleanup()
+        self.is_gpio_active = False
 
     def measure_distance(self):
         """
@@ -125,6 +127,8 @@ class GestureModule:
         last_gesture_time = time.time()
 
         while True:
+            if not self.is_gpio_active:
+                break
             current_distance = self.get_smoothed_distance()
 
             if current_distance is None:
