@@ -9,6 +9,7 @@ from functools import lru_cache
 from difflib import SequenceMatcher
 from typing import Optional
 import json 
+import openai
 
 with open('conf/secrets.yaml', 'r') as file:
     config = yaml.safe_load(file)
@@ -32,6 +33,7 @@ class Generation:
         self.messages = []
         self.max_messages = 10
         self.client = Groq(api_key=groqKey)
+        openai.api_key = openaiKey
 
     def encode_image(self, image_path: str) -> str:
         """
@@ -111,105 +113,70 @@ class Generation:
     
     def live_chat_with_ai(self, text: str) -> str:
         """
-        Conduct a live chat session with AI, including web search and assistant control.
+        Conduct a live chat session with AI using OpenAI's gpt-4o-mini model and web search tool calling.
         """
+        import json
         current_time_date = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         system_message = (
             f"Current time and date: {current_time_date}. "
             "You are Fam, an AI voice assistant created by Akshat Singh Kushwaha. "
-            "When you need up-to-date information, use 'SEARCH_WEB <query>' to search the web. "
-            "Replace the 'SEARCH_WEB <query>' command in your response with the actual search results. "
-            "Provide correct and factual answers, and utilize available tools when necessary. "
-            "Respond thoroughly without stating any limitations or knowledge cutoffs."
+            "You can search the web for current information using the function search_web. "
+            "Only call search_web when a user needs up-to-date info."
         )
-
-        tools = [
-            {
-                "type": "function",
-                "function": {
-                    "name": "control_music",
-                    "description": "Control music playback (play, pause, resume, stop, next)",
-                    "parameters": {
-                        "type": "object",
-                        "properties": {
-                            "action": {
-                                "type": "string",
-                                "enum": ["play", "pause", "resume", "stop", "next"],
-                                "description": "Music control action to perform"
-                            },
-                            "song_name": {
-                                "type": "string",
-                                "description": "Optional song name for 'play' action"
-                            }
-                        },
-                        "required": ["action"]
-                    }
-                }
-            },
-            {
-                "type": "function",
-                "function": {
-                    "name": "search_web",
-                    "description": "Search the web for current information",
-                    "parameters": {
-                        "type": "object",
-                        "properties": {
-                            "query": {
-                                "type": "string",
-                                "description": "The search query"
-                            }
-                        },
-                        "required": ["query"]
-                    }
-                }
-            }
+        self.messages = [
+            {"role": "system", "content": system_message},
+            {"role": "user", "content": text},
         ]
 
-        self.messages = [{"role": "system", "content": system_message}]
-        self.messages.append({"role": "user", "content": text})
-        last_response = ""
+        functions = [{
+            "name": "search_web",
+            "description": "Search the web for current information",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "query": {
+                        "type": "string",
+                        "description": "The search query"
+                    }
+                },
+                "required": ["query"]
+            },
+        }]
 
-        while True:
-            completion = self.client.chat.completions.create(
-                model="mixtral-8x7b-32768",
-                messages=self.messages,
-                tools=tools,
-                tool_choice="auto",
-                temperature=0.7,
-                max_tokens=2048,
-                top_p=1,
-                stream=False,
-                stop=None,
-            )
-            response = completion.choices[0].message
+        response = openai.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=self.messages,
+            functions=functions,
+            function_call="auto",
+            temperature=0.7,
+            max_tokens=2048,
+        )
 
-            if response.tool_calls:
-                for tool_call in response.tool_calls:
-                    func_name = tool_call.function.name
-                    func_args = json.loads(tool_call.function.arguments)
+        response_msg = response.choices[0].message
+        if response_msg.get("function_call"):
+            try:
+                call_name = response_msg["function_call"]["name"]
+                args = json.loads(response_msg["function_call"]["arguments"])
+                if call_name == "search_web":
+                    result = self.search_web(args.get("query", ""))
+                    self.messages.append(response_msg)
+                    self.messages.append({
+                        "role": "function",
+                        "name": "search_web",
+                        "content": result,
+                    })
+                    second_response = openai.chat.completions.create(
+                        model="gpt-4o-mini",
+                        messages=self.messages,
+                        temperature=0.7,
+                        max_tokens=2048,
+                    )
+                    return second_response.choices[0].message.content
+            except Exception as e:
+                return f"Error calling function: {e}"
 
-                    if func_name == "search_web":
-                        search_result = self.search_web(func_args["query"])
-                        self.messages.append({"role": "tool", "content": search_result, "tool_call_id": tool_call.id})
-
-                    elif func_name == "control_music":
-                        action = func_args["action"]
-                        song_name = func_args.get("song_name")
-                        method_name = f"handle_{action}_music"
-                        if hasattr(self, method_name):
-                            func = getattr(self, method_name)
-                            result = func(song_name) if song_name else func()
-                            self.messages.append({"role": "tool", "content": f"Music {action}: {result}", "tool_call_id": tool_call.id})
-                continue
-
-            # Prevent repeating responses
-            if self.is_similar_response(response.content, last_response):
-                return response.content
-
-            last_response = response.content
-            self.messages.append({"role": "assistant", "content": response.content})
-            return response.content
-
+        return response_msg["content"]
+    
     def extract_command_argument(self, response: str, command: str) -> Optional[str]:
         """
         Extract the argument for a given command from the response text.
