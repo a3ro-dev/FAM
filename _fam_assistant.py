@@ -53,13 +53,14 @@ class GestureModule:
         debounce_time (float): Minimum time between valid gestures
         distance_history (deque): Recent distance measurements for smoothing
     """
+
     def __init__(self, trigger_pin=18, echo_pin=24, distance_range=(2, 5), gesture_interval=0.2, debounce_time=1.0):
         self.trigger_pin = trigger_pin
         self.echo_pin = echo_pin
         self.distance_range = distance_range
         self.gesture_interval = gesture_interval
         self.debounce_time = debounce_time
-        self.distance_history = deque(maxlen=5)  # Increased history size
+        self.distance_history = deque(maxlen=5)
         self.is_gpio_active = True
         self.last_valid_measurement = None
         self.consecutive_timeouts = 0
@@ -67,13 +68,12 @@ class GestureModule:
         self.setup_gpio()
 
     def setup_gpio(self):
-        """Initialize GPIO pins with proper settings."""
         try:
             GPIO.setmode(GPIO.BCM)
             GPIO.setup(self.trigger_pin, GPIO.OUT)
-            GPIO.setup(self.echo_pin, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)  # Added pull-down
+            GPIO.setup(self.echo_pin, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
             GPIO.output(self.trigger_pin, False)
-            time.sleep(0.1)  # Allow sensor to settle
+            time.sleep(0.1)
         except Exception as e:
             logging.error(f"GPIO setup failed: {e}")
             self.is_gpio_active = False
@@ -83,24 +83,15 @@ class GestureModule:
         self.is_gpio_active = False
 
     def measure_distance(self):
-        """Measure distance with improved accuracy and timeout handling."""
         if not self.is_gpio_active:
             return None
-
         try:
-            # Reset trigger
             GPIO.output(self.trigger_pin, False)
-            time.sleep(0.000005)  # 5 microseconds settle
-
-            # Send 10us pulse
+            time.sleep(0.000005)
             GPIO.output(self.trigger_pin, True)
-            time.sleep(0.00001)    # Exactly 10 microseconds
+            time.sleep(0.00001)
             GPIO.output(self.trigger_pin, False)
-
-            # More precise timeout handling
-            timeout = time.time() + 0.02  # 20ms timeout
-            
-            # Wait for echo start (LOW to HIGH)
+            timeout = time.time() + 0.02
             while GPIO.input(self.echo_pin) == 0:
                 pulse_start = time.time()
                 if pulse_start > timeout:
@@ -108,83 +99,58 @@ class GestureModule:
                     if self.consecutive_timeouts > self.max_timeouts:
                         logging.warning("Multiple consecutive timeouts detected")
                     return None
-
-            # Wait for echo end (HIGH to LOW)
             while GPIO.input(self.echo_pin) == 1:
                 pulse_end = time.time()
                 if pulse_end > timeout:
                     return None
-
-            # Reset timeout counter on successful measurement
             self.consecutive_timeouts = 0
-
-            # Calculate distance
-            pulse_duration = pulse_end - pulse_start
-            distance = (pulse_duration * 34300) / 2  # Speed of sound = 343 m/s
-
-            # Validate measurement
-            if 0 <= distance <= 400:  # Valid range for HC-SR04
+            pulse_duration = pulse_end - pulse_start # type: ignore
+            distance = (pulse_duration * 34300) / 2
+            if 0 <= distance <= 400:
                 self.last_valid_measurement = distance
                 return round(distance, 1)
             return None
-
         except Exception as e:
             logging.warning(f"Error measuring distance: {e}")
             return None
 
     def get_smoothed_distance(self):
-        """Get smoothed distance measurement with outlier rejection."""
         measurements = []
-        for _ in range(3):  # Take 3 measurements
+        for _ in range(3):
             dist = self.measure_distance()
             if dist is not None:
                 measurements.append(dist)
-            time.sleep(0.01)  # Brief delay between measurements
-
-        if len(measurements) < 2:  # Need at least 2 valid measurements
+            time.sleep(0.01)
+        if len(measurements) < 2:
             return None
-
-        # Remove outliers (measurements that deviate too much from median)
         median = sorted(measurements)[len(measurements)//2]
-        filtered = [x for x in measurements if abs(x - median) < 2]  # Within 2cm of median
-
+        filtered = [x for x in measurements if abs(x - median) < 2]
         if not filtered:
             return None
-
         avg_distance = sum(filtered) / len(filtered)
         self.distance_history.append(avg_distance)
-        
-        # Return moving average if we have enough history
         if len(self.distance_history) >= 3:
             return sum(self.distance_history) / len(self.distance_history)
         return avg_distance
 
     def detect_hand_gesture(self):
-        """Detect hand gestures with improved reliability."""
         if not self.is_gpio_active:
             return False
-
         valid_detections = 0
-        required_detections = 2  # Need 2 valid detections in sequence
-        
-        for _ in range(3):  # Try up to 3 times
+        required_detections = 2
+        for _ in range(3):
             distance = self.get_smoothed_distance()
-            
             if distance is None:
                 time.sleep(self.gesture_interval)
                 continue
-                
-            # Check if distance is within valid range (2-5cm)
             if self.distance_range[0] <= distance <= self.distance_range[1]:
                 valid_detections += 1
                 if valid_detections >= required_detections:
                     logging.info(f"Hand gesture detected at {distance:.1f}cm")
                     return True
             else:
-                valid_detections = 0  # Reset on invalid detection
-                
+                valid_detections = 0
             time.sleep(self.gesture_interval)
-            
         return False
 
     def start_hand_gesture_detection(self):

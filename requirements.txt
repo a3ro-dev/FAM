@@ -18,5 +18,9 @@ pyttsx3
 nltk
 openai
 pydub
+streamlit
 python-Levenshtein
 spotipy
+mutagen
+paramiko
+ptyprocess
