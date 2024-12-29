@@ -1,7 +1,4 @@
 PyAudio
-opencv-python
-pvporcupine
-pyttsx3
 pygame
 SpeechRecognition==2.2.0
 pytube
@@ -9,12 +6,10 @@ youtube_search
 moviepy
 fuzzywuzzy
 pyyaml
-gTTS
 groq
 httpx==0.24.1
 numpy
 RPi.GPIO
-pyttsx3
 nltk
 openai
 pydub
