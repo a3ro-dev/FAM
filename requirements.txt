@@ -13,7 +13,7 @@ RPi.GPIO
 nltk
 openai
 pydub
-streamlit==1.41.1
+# streamlit==1.41.1
 python-Levenshtein
 spotipy
 mutagen

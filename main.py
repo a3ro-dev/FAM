@@ -1,7 +1,7 @@
 import yaml
 import time
 import threading
-import subprocess
+# import subprocess
 from pathlib import Path
 from multiprocessing import Process
 from _fam_assistant import FamAssistant
@@ -10,26 +10,26 @@ def load_config():
     with open('conf/secrets.yaml') as file:
         return yaml.safe_load(file)
 
-def start_streamlit_app(script_path):
-    """Launch a Streamlit application."""
-    subprocess.run(['streamlit', 'run', script_path])
+# def start_streamlit_app(script_path):
+#     """Launch a Streamlit application."""
+#     subprocess.run(['streamlit', 'run', script_path])
 
-def start_streamlit_apps():
-    """Start all Streamlit apps in the pages directory."""
-    pages_dir = Path(__file__).parent / 'pages'
-    streamlit_files = [
-        pages_dir / 'versionManagement.py',
-        pages_dir / 'secretsEditor.py',
-        pages_dir / 'musicManagement.py'
-    ]
+# def start_streamlit_apps():
+#     """Start all Streamlit apps in the pages directory."""
+#     pages_dir = Path(__file__).parent / 'pages'
+#     streamlit_files = [
+#         pages_dir / 'versionManagement.py',
+#         pages_dir / 'secretsEditor.py',
+#         pages_dir / 'musicManagement.py'
+#     ]
     
-    processes = []
-    for file in streamlit_files:
-        if file.exists():
-            p = Process(target=start_streamlit_app, args=(str(file),))
-            p.start()
-            processes.append(p)
-    return processes
+#     processes = []
+#     for file in streamlit_files:
+#         if file.exists():
+#             p = Process(target=start_streamlit_app, args=(str(file),))
+#             p.start()
+#             processes.append(p)
+#     return processes
 
 def main():
     """
@@ -57,12 +57,12 @@ def main():
     assistant_thread.start()
 
     # Start Streamlit apps
-    streamlit_processes = start_streamlit_apps()
+    # streamlit_processes = start_streamlit_apps()
 
-    return assistant, assistant_thread, streamlit_processes
+    return assistant, assistant_thread # , streamlit_processes
 
 if __name__ == "__main__":
-    assistant, assistant_thread, streamlit_processes = main()
+    assistant, assistant_thread = main() # , streamlit_processes = main()
     try:
         while True:
             time.sleep(1)
@@ -70,6 +70,6 @@ if __name__ == "__main__":
         assistant.stop()
         assistant_thread.join()
         # Terminate Streamlit processes
-        for p in streamlit_processes:
-            p.terminate()
-            p.join()
+        # for p in streamlit_processes:
+        #     p.terminate()
+        #     p.join()
