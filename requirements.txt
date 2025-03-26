@@ -3,7 +3,7 @@ pygame
 SpeechRecognition==2.2.0
 pytube
 youtube_search
-moviepy
+moviepy==1.0.3
 fuzzywuzzy
 pyyaml
 groq
@@ -19,3 +19,4 @@ spotipy
 mutagen
 paramiko
 ptyprocess
+wikipedia-api
